@@ -8,9 +8,9 @@ from pydantic import BaseModel
 from testcontainers.neo4j import Neo4jContainer
 from ulid import ULID
 
-from ouroboros.aggregates.aggregate import Aggregate
-from ouroboros.events import Event
-from ouroboros.integrations.neo4j import (
+from interlock.aggregates.aggregate import Aggregate
+from interlock.events import Event
+from interlock.integrations.neo4j import (
     Neo4jConfig,
     Neo4jConnectionManager,
     Neo4jEventStore,

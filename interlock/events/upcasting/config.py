@@ -23,7 +23,7 @@ class UpcastingConfig:
 
         Eager upcasting (transform on read and write):
 
-        >>> from ouroboros.events import EagerUpcastingStrategy
+        >>> from interlock.events import EagerUpcastingStrategy
         >>> config = UpcastingConfig(strategy=EagerUpcastingStrategy())
 
     See Also:

@@ -5,10 +5,10 @@ from decimal import Decimal
 import pytest
 from ulid import ULID
 
-from ouroboros.application import ApplicationBuilder
-from ouroboros.context import get_context
-from ouroboros.events.processing import EventProcessor
-from ouroboros.routing import handles_event
+from interlock.application import ApplicationBuilder
+from interlock.context import get_context
+from interlock.events.processing import EventProcessor
+from interlock.routing import handles_event
 from tests.conftest import (
     AccountOpened,
     BankAccount,

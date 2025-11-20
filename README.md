@@ -1,4 +1,4 @@
-# Ouroboros
+# Interlock
 
 CQRS and Event Sourcing made easy in python.
 
@@ -8,7 +8,7 @@ CQRS and Event Sourcing made easy in python.
 
 ### Basics
 
-In ourobouros, you build `Application`s which compile together your various domain objects.
+In interlock, you build `Application`s which compile together your various domain objects.
 
 
 

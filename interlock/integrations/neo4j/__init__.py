@@ -1,14 +1,14 @@
-"""Neo4j integration for Ouroboros event sourcing framework.
+"""Neo4j integration for interlock event sourcing framework.
 
 This module provides Neo4j implementations of the EventStore,
 AggregateSnapshotStorageBackend, and SagaStateStore interfaces
 using async Neo4j driver.
 
 Installation:
-    pip install ouroboros[neo4j]
+    pip install interlock[neo4j]
 
 Usage:
-    >>> from ouroboros.integrations.neo4j import (
+    >>> from interlock.integrations.neo4j import (
     ...     Neo4jConfig,
     ...     Neo4jConnectionManager,
     ...     Neo4jEventStore,

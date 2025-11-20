@@ -32,7 +32,7 @@ class EventProcessor:
 
     **How it works:**
     Subclass EventProcessor and use the @handles_event decorator to declare
-    which events the processor is interested in. Ouroboros automatically:
+    which events the processor is interested in. interlock automatically:
     - Sets up event routing based on type annotations
     - Dispatches events to the appropriate handler methods
     - Manages subscriptions and delivery
@@ -54,7 +54,7 @@ class EventProcessor:
         _event_router: Class-level routing table (set by __init_subclass__)
 
     Example:
-        >>> from ouroboros.routing import handles_event
+        >>> from interlock.routing import handles_event
         >>>
         >>> class OrderPlaced(BaseModel):
         ...     order_id: str

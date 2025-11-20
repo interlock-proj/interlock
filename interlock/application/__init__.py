@@ -1,4 +1,4 @@
-"""Application bootstrapping and dependency injection for Ouroboros."""
+"""Application bootstrapping and dependency injection for interlock."""
 
 from .application import Application, ApplicationBuilder
 from .configurators import ApplicationProfile, ApplicationProfileSet

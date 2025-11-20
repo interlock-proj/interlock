@@ -13,13 +13,13 @@ import pytest
 from pydantic import BaseModel
 from ulid import ULID
 
-from ouroboros.aggregates.aggregate import Aggregate
-from ouroboros.application import ApplicationBuilder
-from ouroboros.commands import Command, CommandHandler, CommandMiddleware
-from ouroboros.events import InMemoryEventTransport
-from ouroboros.events.processing import InMemorySagaStateStore
-from ouroboros.events.store import EventStore, InMemoryEventStore
-from ouroboros.routing import applies_event, handles_command
+from interlock.aggregates.aggregate import Aggregate
+from interlock.application import ApplicationBuilder
+from interlock.commands import Command, CommandHandler, CommandMiddleware
+from interlock.events import InMemoryEventTransport
+from interlock.events.processing import InMemorySagaStateStore
+from interlock.events.store import EventStore, InMemoryEventStore
+from interlock.routing import applies_event, handles_command
 
 
 class IncrementCounter(Command):
@@ -294,6 +294,6 @@ def bank_account_app(base_app_builder: ApplicationBuilder):
 def clear_execution_context():
     """Automatically clear execution context after each test."""
     yield
-    from ouroboros.context import clear_context
+    from interlock.context import clear_context
 
     clear_context()

@@ -12,7 +12,7 @@ class MongoDBConfig(BaseModel):
 
     Attributes:
         uri: MongoDB connection URI (e.g., "mongodb://localhost:27017" or MongoDB Atlas URI)
-        database: Database name to use (default: "ouroboros")
+        database: Database name to use (default: "interlock")
         max_pool_size: Maximum number of connections in the pool
         min_pool_size: Minimum number of connections in the pool
         max_idle_time_ms: Maximum idle time for connections in milliseconds
@@ -41,7 +41,7 @@ class MongoDBConfig(BaseModel):
         ],
     )
     database: str = Field(
-        default="ouroboros",
+        default="interlock",
         description="Database name to connect to",
     )
     max_pool_size: int = Field(
@@ -80,7 +80,7 @@ class MongoDBConfig(BaseModel):
             "examples": [
                 {
                     "uri": "mongodb://localhost:27017",
-                    "database": "ouroboros",
+                    "database": "interlock",
                     "max_pool_size": 100,
                 },
                 {

@@ -11,7 +11,7 @@ try:
 except ImportError as err:
     raise ImportError(
         "neo4j package is required for Neo4j integration. "
-        "Install it with: pip install ouroboros[neo4j]"
+        "Install it with: pip install interlock[neo4j]"
     ) from err
 
 from .config import Neo4jConfig

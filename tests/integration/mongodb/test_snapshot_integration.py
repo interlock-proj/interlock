@@ -6,8 +6,8 @@ from pydantic import BaseModel
 from testcontainers.mongodb import MongoDbContainer
 from ulid import ULID
 
-from ouroboros.aggregates import Aggregate
-from ouroboros.integrations.mongodb import (
+from interlock.aggregates import Aggregate
+from interlock.integrations.mongodb import (
     MongoDBConfig,
     MongoDBConnectionManager,
     MongoDBSnapshotBackend,
@@ -40,7 +40,7 @@ def mongodb_container():
 @pytest_asyncio.fixture
 async def connection_manager(mongodb_container):
     """Create connection manager for MongoDB container."""
-    config = MongoDBConfig(uri=mongodb_container.get_connection_url(), database="test_ouroboros")
+    config = MongoDBConfig(uri=mongodb_container.get_connection_url(), database="test_interlock")
     async with MongoDBConnectionManager(config) as manager:
         yield manager
 

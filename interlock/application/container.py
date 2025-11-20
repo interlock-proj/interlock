@@ -1,4 +1,4 @@
-"""Dependency injection container for Ouroboros applications.
+"""Dependency injection container for interlock applications.
 
 This module provides a simple dependency injection container that supports
 constructor injection by inspecting type annotations.

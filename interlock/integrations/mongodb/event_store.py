@@ -10,9 +10,9 @@ from typing import Any
 
 from ulid import ULID
 
-from ouroboros.aggregates.exceptions import ConcurrencyError
-from ouroboros.events import Event
-from ouroboros.events.store import EventStore
+from interlock.aggregates.exceptions import ConcurrencyError
+from interlock.events import Event
+from interlock.events.store import EventStore
 
 from .connection import MongoDBConnectionManager
 

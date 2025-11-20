@@ -7,16 +7,16 @@ import pytest
 from pydantic import BaseModel
 from ulid import ULID
 
-from ouroboros.aggregates.aggregate import Aggregate
-from ouroboros.events.event import Event
-from ouroboros.events.processing.processor import EventProcessor
-from ouroboros.events.processing.projectors import AggregateProjector
-from ouroboros.events.processing.strategies import (
+from interlock.aggregates.aggregate import Aggregate
+from interlock.events.event import Event
+from interlock.events.processing.processor import EventProcessor
+from interlock.events.processing.projectors import AggregateProjector
+from interlock.events.processing.strategies import (
     CatchupResult,
     FromAggregateSnapshot,
     NoCatchup,
 )
-from ouroboros.routing import applies_event, handles_event
+from interlock.routing import applies_event, handles_event
 
 
 class UserCreated(BaseModel):

@@ -30,8 +30,8 @@ class Saga(EventProcessor, Generic[TState]):
     underlying SagaStateStore works with any BaseModel (like EventStore).
 
     Example:
-        >>> from ouroboros.events.processing import Saga, saga_step, SagaStateStore
-        >>> from ouroboros.routing import handles_event
+        >>> from interlock.events.processing import Saga, saga_step, SagaStateStore
+        >>> from interlock.routing import handles_event
         >>> from pydantic import BaseModel
         >>>
         >>> class CheckoutState(BaseModel):

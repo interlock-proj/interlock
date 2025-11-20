@@ -5,7 +5,7 @@ from datetime import datetime
 import pytest
 from ulid import ULID
 
-from ouroboros.events.processing.checkpoint import (
+from interlock.events.processing.checkpoint import (
     Checkpoint,
     InMemoryCheckpointBackend,
 )

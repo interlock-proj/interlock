@@ -3,7 +3,7 @@
 import pytest
 from pydantic import ValidationError
 
-from ouroboros.integrations.neo4j import Neo4jConfig
+from interlock.integrations.neo4j import Neo4jConfig
 
 
 def test_config_minimal():

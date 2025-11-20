@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Ouroboros is a CQRS (Command Query Responsibility Segregation) and Event Sourcing framework for Python. It provides a clean, type-safe API for building event-sourced applications with support for aggregates, commands, events, projections, and sagas.
+Interlock is a CQRS (Command Query Responsibility Segregation) and Event Sourcing framework for Python. It provides a clean, type-safe API for building event-sourced applications with support for aggregates, commands, events, projections, and sagas.
 
 ## Development Commands
 
@@ -42,7 +42,7 @@ uv run ruff check .
 # Type checking
 make typecheck
 # or
-uv run mypy ouroboros
+uv run mypy interlock
 
 # Run all quality checks (lint + typecheck)
 make quality
@@ -70,7 +70,7 @@ uv run --extra demo fastapi dev app/api.py
 
 ### Message Routing System
 
-The framework uses a **decorator-based routing system** (`ouroboros/routing.py`) that eliminates the need for `isinstance` checks. All routing uses Python's `singledispatch` for efficient type-based dispatch.
+The framework uses a **decorator-based routing system** (`interlock/routing.py`) that eliminates the need for `isinstance` checks. All routing uses Python's `singledispatch` for efficient type-based dispatch.
 
 **Key decorators:**
 - `@handles_command` - Routes commands to aggregate methods
@@ -119,8 +119,8 @@ The framework provides pluggable storage backends:
 **Event Storage:**
 - `EventStore` (interface) - Persists aggregate event streams
 - `InMemoryEventStore` - Default in-memory implementation
-- `Neo4jEventStore` - Neo4j-backed implementation (ouroboros/integrations/neo4j/)
-- `MongoDBEventStore` - MongoDB-backed implementation (ouroboros/integrations/mongodb/)
+- `Neo4jEventStore` - Neo4j-backed implementation (interlock/integrations/neo4j/)
+- `MongoDBEventStore` - MongoDB-backed implementation (interlock/integrations/mongodb/)
 
 **Snapshot Storage:**
 - `AggregateSnapshotStorageBackend` - Interface for snapshot persistence
@@ -252,16 +252,16 @@ Uses `ruff` for linting and formatting with:
 
 ### Import Style
 
-Use absolute imports from the `ouroboros` package root.
+Use absolute imports from the `interlock` package root.
 
 ## Common Patterns
 
 ### Defining Aggregates
 
 ```python
-from ouroboros import Aggregate, handles_command, applies_event
-from ouroboros.commands import Command
-from ouroboros.events import Event
+from interlock import Aggregate, handles_command, applies_event
+from interlock.commands import Command
+from interlock.events import Event
 
 class MyAggregate(Aggregate):
     name: str = ""
@@ -285,7 +285,7 @@ class MyAggregate(Aggregate):
 ### Defining Commands
 
 ```python
-from ouroboros.commands import Command
+from interlock.commands import Command
 from uuid import UUID
 
 class CreateAggregate(Command):
@@ -300,7 +300,7 @@ Commands must:
 ### Defining Events
 
 ```python
-from ouroboros.events import Event
+from interlock.events import Event
 
 class AggregateCreated(Event):
     name: str
@@ -315,7 +315,7 @@ Events must:
 ### Defining Event Processors
 
 ```python
-from ouroboros import EventProcessor, handles_event
+from interlock import EventProcessor, handles_event
 
 class MyProjector(EventProcessor):
     @handles_event

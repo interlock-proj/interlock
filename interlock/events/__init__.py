@@ -1,4 +1,4 @@
-"""Event sourcing infrastructure for Ouroboros.
+"""Event sourcing infrastructure for interlock.
 
 This package provides the core event sourcing components:
 - Event: Immutable record of state changes

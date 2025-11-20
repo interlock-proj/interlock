@@ -4,8 +4,8 @@ import pytest
 from pydantic import BaseModel
 from ulid import ULID
 
-from ouroboros.events import Event
-from ouroboros.events.upcasting import (
+from interlock.events import Event
+from interlock.events.upcasting import (
     EagerUpcastingStrategy,
     EventUpcaster,
     LazyUpcastingStrategy,

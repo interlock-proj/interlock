@@ -6,8 +6,8 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 from ulid import ULID
 
-from ouroboros.aggregates.aggregate import Aggregate
-from ouroboros.integrations.neo4j import (
+from interlock.aggregates.aggregate import Aggregate
+from interlock.integrations.neo4j import (
     Neo4jConnectionManager,
     Neo4jSnapshotBackend,
     SnapshotStorageStrategy,
@@ -173,7 +173,7 @@ async def test_load_snapshot_with_intended_version(
 @pytest.mark.asyncio
 async def test_load_class(snapshot_backend_single):
     """Test dynamic class loading."""
-    from ouroboros.aggregates.aggregate import Aggregate
+    from interlock.aggregates.aggregate import Aggregate
 
-    cls = snapshot_backend_single._load_class("ouroboros.aggregates.aggregate", "Aggregate")
+    cls = snapshot_backend_single._load_class("interlock.aggregates.aggregate", "Aggregate")
     assert cls == Aggregate

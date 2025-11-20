@@ -62,7 +62,7 @@ class Neo4jSagaStateStore(SagaStateStore):
     - (Saga)-[:COMPLETED_STEP]->(CompletedStep {step_name})
 
     Example:
-        >>> from ouroboros.integrations.neo4j import Neo4jConnectionManager, Neo4jSagaStateStore
+        >>> from interlock.integrations.neo4j import Neo4jConnectionManager, Neo4jSagaStateStore
         >>>
         >>> connection_manager = Neo4jConnectionManager(config)
         >>> state_store = Neo4jSagaStateStore(connection_manager)

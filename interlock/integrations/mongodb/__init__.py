@@ -1,14 +1,14 @@
-"""MongoDB integration for Ouroboros event sourcing framework.
+"""MongoDB integration for interlock event sourcing framework.
 
 This module provides MongoDB implementations of the EventStore,
 AggregateSnapshotStorageBackend, SagaStateStore, IdempotencyStorageBackend,
 and CheckpointBackend interfaces using async PyMongo driver.
 
 Installation:
-    pip install ouroboros[mongodb]
+    pip install interlock[mongodb]
 
 Usage:
-    >>> from ouroboros.integrations.mongodb import (
+    >>> from interlock.integrations.mongodb import (
     ...     MongoDBConfig,
     ...     MongoDBConnectionManager,
     ...     MongoDBEventStore,

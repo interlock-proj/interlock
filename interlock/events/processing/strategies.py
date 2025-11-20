@@ -166,7 +166,7 @@ class FromReplayingEvents(CatchupStrategy):
     **Advantages:**
     - Simple and correct - guarantees all events are processed
     - No additional infrastructure needed (uses existing event store)
-    - Ouroboros can optimize by filtering irrelevant events
+    - interlock can optimize by filtering irrelevant events
 
     **Disadvantages:**
     - Can be very slow for large event stores (millions+ events)

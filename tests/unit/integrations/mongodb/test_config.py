@@ -3,7 +3,7 @@
 import pytest
 from pydantic import ValidationError
 
-from ouroboros.integrations.mongodb import MongoDBConfig
+from interlock.integrations.mongodb import MongoDBConfig
 
 
 def test_config_with_defaults():
@@ -11,7 +11,7 @@ def test_config_with_defaults():
     config = MongoDBConfig(uri="mongodb://localhost:27017")
 
     assert config.uri == "mongodb://localhost:27017"
-    assert config.database == "ouroboros"
+    assert config.database == "interlock"
     assert config.max_pool_size == 100
     assert config.min_pool_size == 0
     assert config.max_idle_time_ms is None

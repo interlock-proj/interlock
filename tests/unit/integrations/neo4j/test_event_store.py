@@ -7,9 +7,9 @@ import pytest
 from pydantic import BaseModel
 from ulid import ULID
 
-from ouroboros.aggregates.exceptions import ConcurrencyError
-from ouroboros.events import Event
-from ouroboros.integrations.neo4j import Neo4jConnectionManager, Neo4jEventStore
+from interlock.aggregates.exceptions import ConcurrencyError
+from interlock.events import Event
+from interlock.integrations.neo4j import Neo4jConnectionManager, Neo4jEventStore
 
 
 class SampleEventData(BaseModel):

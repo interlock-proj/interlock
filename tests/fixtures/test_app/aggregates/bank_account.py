@@ -4,8 +4,8 @@ from decimal import Decimal
 
 from pydantic import BaseModel
 
-from ouroboros.aggregates.aggregate import Aggregate
-from ouroboros.routing import applies_event, handles_command
+from interlock.aggregates.aggregate import Aggregate
+from interlock.routing import applies_event, handles_command
 from tests.fixtures.test_app.commands.bank_commands import DepositMoney, WithdrawMoney
 
 

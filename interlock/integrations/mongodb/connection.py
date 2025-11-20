@@ -9,7 +9,7 @@ try:
 except ImportError as err:
     raise ImportError(
         "pymongo package is required for MongoDB integration. "
-        "Install it with: pip install ouroboros[mongodb]"
+        "Install it with: pip install interlock[mongodb]"
     ) from err
 
 from .config import MongoDBConfig

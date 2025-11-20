@@ -16,7 +16,7 @@ class SagaStateStore(ABC):
     This store provides persistent state management for sagas.
 
     Example:
-        >>> from ouroboros.events.processing import Saga, SagaStateStore
+        >>> from interlock.events.processing import Saga, SagaStateStore
         >>>
         >>> class CheckoutState(BaseModel):
         ...     order_id: str

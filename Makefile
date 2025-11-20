@@ -21,7 +21,7 @@ lint:
 	uv run ruff check .
 
 typecheck:
-	uv run mypy ouroboros
+	uv run mypy interlock
 
 test:
 	uv run pytest

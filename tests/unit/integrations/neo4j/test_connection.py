@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from ouroboros.integrations.neo4j import Neo4jConfig, Neo4jConnectionManager
+from interlock.integrations.neo4j import Neo4jConfig, Neo4jConnectionManager
 
 
 @pytest.fixture
@@ -27,7 +27,7 @@ def mock_driver():
 @pytest.mark.asyncio
 async def test_driver_property_lazy_init(config):
     """Test driver is lazily initialized."""
-    with patch("ouroboros.integrations.neo4j.connection.AsyncGraphDatabase") as mock_gdb:
+    with patch("interlock.integrations.neo4j.connection.AsyncGraphDatabase") as mock_gdb:
         mock_driver = AsyncMock()
         mock_gdb.driver.return_value = mock_driver
 
@@ -51,7 +51,7 @@ async def test_driver_property_lazy_init(config):
 @pytest.mark.asyncio
 async def test_session_context_manager(config):
     """Test session context manager."""
-    with patch("ouroboros.integrations.neo4j.connection.AsyncGraphDatabase") as mock_gdb:
+    with patch("interlock.integrations.neo4j.connection.AsyncGraphDatabase") as mock_gdb:
         mock_driver = MagicMock()  # Use MagicMock for driver to avoid async issues
         mock_session = MagicMock()
         mock_session.close = AsyncMock()
@@ -71,7 +71,7 @@ async def test_session_context_manager(config):
 @pytest.mark.asyncio
 async def test_session_with_custom_database(config):
     """Test session with custom database override."""
-    with patch("ouroboros.integrations.neo4j.connection.AsyncGraphDatabase") as mock_gdb:
+    with patch("interlock.integrations.neo4j.connection.AsyncGraphDatabase") as mock_gdb:
         mock_driver = MagicMock()
         mock_session = MagicMock()
         mock_session.close = AsyncMock()
@@ -91,7 +91,7 @@ async def test_session_with_custom_database(config):
 @pytest.mark.asyncio
 async def test_transaction_commit(config):
     """Test transaction commits on success."""
-    with patch("ouroboros.integrations.neo4j.connection.AsyncGraphDatabase") as mock_gdb:
+    with patch("interlock.integrations.neo4j.connection.AsyncGraphDatabase") as mock_gdb:
         mock_driver = MagicMock()
         mock_session = MagicMock()
         mock_session.close = AsyncMock()
@@ -115,7 +115,7 @@ async def test_transaction_commit(config):
 @pytest.mark.asyncio
 async def test_transaction_rollback_on_error(config):
     """Test transaction rolls back on exception."""
-    with patch("ouroboros.integrations.neo4j.connection.AsyncGraphDatabase") as mock_gdb:
+    with patch("interlock.integrations.neo4j.connection.AsyncGraphDatabase") as mock_gdb:
         mock_driver = MagicMock()
         mock_session = MagicMock()
         mock_session.close = AsyncMock()
@@ -140,7 +140,7 @@ async def test_transaction_rollback_on_error(config):
 @pytest.mark.asyncio
 async def test_verify_connectivity_success(config):
     """Test connectivity verification succeeds."""
-    with patch("ouroboros.integrations.neo4j.connection.AsyncGraphDatabase") as mock_gdb:
+    with patch("interlock.integrations.neo4j.connection.AsyncGraphDatabase") as mock_gdb:
         mock_driver = AsyncMock()
         mock_driver.verify_connectivity.return_value = None
         mock_gdb.driver.return_value = mock_driver
@@ -155,7 +155,7 @@ async def test_verify_connectivity_success(config):
 @pytest.mark.asyncio
 async def test_verify_connectivity_failure(config):
     """Test connectivity verification fails gracefully."""
-    with patch("ouroboros.integrations.neo4j.connection.AsyncGraphDatabase") as mock_gdb:
+    with patch("interlock.integrations.neo4j.connection.AsyncGraphDatabase") as mock_gdb:
         mock_driver = AsyncMock()
         mock_driver.verify_connectivity.side_effect = Exception("Connection failed")
         mock_gdb.driver.return_value = mock_driver
@@ -169,7 +169,7 @@ async def test_verify_connectivity_failure(config):
 @pytest.mark.asyncio
 async def test_close(config):
     """Test closing the connection manager."""
-    with patch("ouroboros.integrations.neo4j.connection.AsyncGraphDatabase") as mock_gdb:
+    with patch("interlock.integrations.neo4j.connection.AsyncGraphDatabase") as mock_gdb:
         mock_driver = AsyncMock()
         mock_gdb.driver.return_value = mock_driver
 
@@ -185,7 +185,7 @@ async def test_close(config):
 @pytest.mark.asyncio
 async def test_async_context_manager(config):
     """Test async context manager."""
-    with patch("ouroboros.integrations.neo4j.connection.AsyncGraphDatabase") as mock_gdb:
+    with patch("interlock.integrations.neo4j.connection.AsyncGraphDatabase") as mock_gdb:
         mock_driver = AsyncMock()
         mock_gdb.driver.return_value = mock_driver
 

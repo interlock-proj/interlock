@@ -2,7 +2,7 @@
 
 from decimal import Decimal
 
-from ouroboros.commands import Command
+from interlock.commands import Command
 
 
 class DepositMoney(Command):

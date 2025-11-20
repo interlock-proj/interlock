@@ -7,7 +7,7 @@ from typing import Any
 
 from ulid import ULID
 
-from ouroboros.aggregates import Aggregate, AggregateSnapshotStorageBackend
+from interlock.aggregates import Aggregate, AggregateSnapshotStorageBackend
 
 from .connection import MongoDBConnectionManager
 

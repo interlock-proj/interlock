@@ -2,9 +2,9 @@
 
 import pytest
 
-from ouroboros.application import ApplicationBuilder
-from ouroboros.events import InMemoryEventTransport
-from ouroboros.events.store import EventStore, InMemoryEventStore
+from interlock.application import ApplicationBuilder
+from interlock.events import InMemoryEventTransport
+from interlock.events.store import EventStore, InMemoryEventStore
 
 
 @pytest.mark.asyncio

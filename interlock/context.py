@@ -2,7 +2,7 @@
 
 This module provides thread-safe and async-safe context storage using Python's
 contextvars. It enables distributed tracing across commands, events, and event
-processors in the Ouroboros framework.
+processors in the interlock framework.
 
 Key concepts:
 - **Correlation ID**: Traces an entire logical operation across all commands and events

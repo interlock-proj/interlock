@@ -2,7 +2,7 @@
 
 from ulid import ULID
 
-from ouroboros.context import (
+from interlock.context import (
     ExecutionContext,
     clear_context,
     get_context,

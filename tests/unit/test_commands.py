@@ -3,12 +3,12 @@ import logging
 import pytest
 from ulid import ULID
 
-from ouroboros.commands import (
+from interlock.commands import (
     CommandBus,
     DelegateToAggregate,
     HandleWithMiddleware,
 )
-from ouroboros.commands.middleware import LoggingMiddleware
+from interlock.commands.middleware import LoggingMiddleware
 from tests.conftest import Counter, ExecutionTracker, IncrementCounter, SetName
 
 

@@ -19,7 +19,7 @@ The `conftest.py` file provides a comprehensive set of reusable fixtures:
 - **Events**: `CounterIncremented`, `NameChanged`, `MoneyDeposited`, `MoneyWithdrawn`, `AccountOpened`
 - **Aggregates**: `Counter`, `BankAccount`
 - **Infrastructure**: `ExecutionTracker` (custom test middleware)
-  - Uses the existing `InMemoryEventStore` from `ouroboros.events.store`
+  - Uses the existing `InMemoryEventStore` from `interlock.events.store`
 
 #### Fixture Categories
 
@@ -281,7 +281,7 @@ async def test_async_operation():
 The `clear_execution_context` fixture runs automatically. If you need manual control:
 
 ```python
-from ouroboros.context import clear_context
+from interlock.context import clear_context
 
 def test_something():
     # test code

@@ -3,13 +3,13 @@
 import pytest
 from pydantic import BaseModel
 
-from ouroboros.events.processing import (
+from interlock.events.processing import (
     InMemorySagaStateStore,
     Saga,
     SagaStateStore,
     saga_step,
 )
-from ouroboros.routing import handles_event
+from interlock.routing import handles_event
 
 
 class CheckoutInitiated(BaseModel):

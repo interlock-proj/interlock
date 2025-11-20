@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from ouroboros.integrations.mongodb import MongoDBConfig, MongoDBConnectionManager
+from interlock.integrations.mongodb import MongoDBConfig, MongoDBConnectionManager
 
 
 @pytest.fixture
@@ -31,7 +31,7 @@ def test_connection_manager_initialization(config):
     assert manager._client is None
 
 
-@patch("ouroboros.integrations.mongodb.connection.AsyncMongoClient")
+@patch("interlock.integrations.mongodb.connection.AsyncMongoClient")
 def test_client_property_creates_client(mock_async_mongo_client, config):
     """Test that client property creates AsyncMongoClient on first access."""
     mock_client = MagicMock()
@@ -50,7 +50,7 @@ def test_client_property_creates_client(mock_async_mongo_client, config):
     )
 
 
-@patch("ouroboros.integrations.mongodb.connection.AsyncMongoClient")
+@patch("interlock.integrations.mongodb.connection.AsyncMongoClient")
 def test_client_property_reuses_client(mock_async_mongo_client, config):
     """Test that client property reuses existing client."""
     mock_client = MagicMock()
@@ -64,7 +64,7 @@ def test_client_property_reuses_client(mock_async_mongo_client, config):
     mock_async_mongo_client.assert_called_once()  # Only called once
 
 
-@patch("ouroboros.integrations.mongodb.connection.AsyncMongoClient")
+@patch("interlock.integrations.mongodb.connection.AsyncMongoClient")
 def test_database_property(mock_async_mongo_client, config):
     """Test database property returns correct database."""
     mock_client = MagicMock()
@@ -80,7 +80,7 @@ def test_database_property(mock_async_mongo_client, config):
 
 
 @pytest.mark.asyncio
-@patch("ouroboros.integrations.mongodb.connection.AsyncMongoClient")
+@patch("interlock.integrations.mongodb.connection.AsyncMongoClient")
 async def test_verify_connectivity_success(mock_async_mongo_client, config):
     """Test verify_connectivity returns True when ping succeeds."""
     mock_client = MagicMock()
@@ -95,7 +95,7 @@ async def test_verify_connectivity_success(mock_async_mongo_client, config):
 
 
 @pytest.mark.asyncio
-@patch("ouroboros.integrations.mongodb.connection.AsyncMongoClient")
+@patch("interlock.integrations.mongodb.connection.AsyncMongoClient")
 async def test_verify_connectivity_failure(mock_async_mongo_client, config):
     """Test verify_connectivity returns False when ping fails."""
     mock_client = MagicMock()
@@ -109,7 +109,7 @@ async def test_verify_connectivity_failure(mock_async_mongo_client, config):
 
 
 @pytest.mark.asyncio
-@patch("ouroboros.integrations.mongodb.connection.AsyncMongoClient")
+@patch("interlock.integrations.mongodb.connection.AsyncMongoClient")
 async def test_close(mock_async_mongo_client, config):
     """Test close method closes the client."""
     mock_client = MagicMock()
@@ -132,7 +132,7 @@ async def test_close_without_client(config):
 
 
 @pytest.mark.asyncio
-@patch("ouroboros.integrations.mongodb.connection.AsyncMongoClient")
+@patch("interlock.integrations.mongodb.connection.AsyncMongoClient")
 async def test_async_context_manager(mock_async_mongo_client, config):
     """Test async context manager closes client on exit."""
     mock_client = MagicMock()

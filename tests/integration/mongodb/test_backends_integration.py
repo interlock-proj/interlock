@@ -8,9 +8,9 @@ from pydantic import BaseModel
 from testcontainers.mongodb import MongoDbContainer
 from ulid import ULID
 
-from ouroboros.commands.middleware.idempotency import IdempotencyTrackedCommand
-from ouroboros.events.processing.checkpoint import Checkpoint
-from ouroboros.integrations.mongodb import (
+from interlock.commands.middleware.idempotency import IdempotencyTrackedCommand
+from interlock.events.processing.checkpoint import Checkpoint
+from interlock.integrations.mongodb import (
     MongoDBCheckpointBackend,
     MongoDBConfig,
     MongoDBConnectionManager,
@@ -61,7 +61,7 @@ def mongodb_container():
 @pytest_asyncio.fixture
 async def connection_manager(mongodb_container):
     """Create connection manager for MongoDB container."""
-    config = MongoDBConfig(uri=mongodb_container.get_connection_url(), database="test_ouroboros")
+    config = MongoDBConfig(uri=mongodb_container.get_connection_url(), database="test_interlock")
     async with MongoDBConnectionManager(config) as manager:
         yield manager
 

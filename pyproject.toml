@@ -1,5 +1,5 @@
 [project]
-name = "ouroboros"
+name = "interlock"
 version = "0.1.0"
 description = ""
 authors = [{name = "Zach Probst", email = "zprobst@resilientvitality.com"}]
@@ -80,7 +80,7 @@ addopts = [
     "-ra",
     "--strict-markers",
     "--strict-config",
-    "--cov=ouroboros",
+    "--cov=interlock",
     "--cov-report=term-missing",
     "--cov-report=html",
 ]

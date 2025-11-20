@@ -39,7 +39,7 @@ class Aggregate(BaseModel):
         Create a simple bank account aggregate:
 
         >>> from decimal import Decimal
-        >>> from ouroboros.routing import handles_command, applies_event
+        >>> from interlock.routing import handles_command, applies_event
         >>>
         >>> class DepositMoney(Command):
         ...     amount: Decimal

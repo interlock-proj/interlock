@@ -2,9 +2,9 @@
 
 import pytest
 
-from ouroboros.aggregates.aggregate import Aggregate
-from ouroboros.application.discovery import ClassScanner, ModuleScanner
-from ouroboros.commands import Command
+from interlock.aggregates.aggregate import Aggregate
+from interlock.application.discovery import ClassScanner, ModuleScanner
+from interlock.commands import Command
 
 
 def test_scanner_imports_package():
@@ -105,7 +105,7 @@ def test_find_subclasses_filters_imported_classes():
     """Test that imported classes from other modules are filtered out."""
     import tests.fixtures.test_app.aggregates.bank_account as module
 
-    # The module imports Aggregate from ouroboros - shouldn't be in results
+    # The module imports Aggregate from interlock - shouldn't be in results
     classes = list(ClassScanner.find_subclasses(module, Aggregate))
 
     for cls in classes:

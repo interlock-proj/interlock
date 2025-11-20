@@ -1,4 +1,4 @@
-"""Application builder and container for Ouroboros applications."""
+"""Application builder and container for interlock applications."""
 
 import asyncio
 from collections.abc import Callable, Sequence
@@ -52,7 +52,7 @@ class Application:
     Examples:
         Create a simple application:
 
-        >>> from ouroboros.application import ApplicationBuilder
+        >>> from interlock.application import ApplicationBuilder
         >>> app = (ApplicationBuilder()
         ...     .add_aggregate(BankAccount)
         ...     .add_command(OpenAccount)
@@ -200,7 +200,7 @@ class Application:
 
 
 class ApplicationBuilder:
-    """Builder for constructing an Ouroboros application with a fluent API.
+    """Builder for constructing an interlock application with a fluent API.
 
     The ApplicationBuilder provides a fluent interface for configuring all aspects
     of your event-sourced application, including aggregates, commands, middleware,
@@ -583,14 +583,14 @@ class ApplicationBuilder:
         Examples:
             Use eager upcasting strategy:
 
-            >>> from ouroboros.events import EagerUpcastingStrategy, UpcastingConfig
+            >>> from interlock.events import EagerUpcastingStrategy, UpcastingConfig
             >>> builder.configure_upcasting(
             ...     UpcastingConfig(strategy=EagerUpcastingStrategy())
             ... )
 
             Use lazy upcasting (default):
 
-            >>> from ouroboros.events import LazyUpcastingStrategy, UpcastingConfig
+            >>> from interlock.events import LazyUpcastingStrategy, UpcastingConfig
             >>> builder.configure_upcasting(
             ...     UpcastingConfig(strategy=LazyUpcastingStrategy())
             ... )

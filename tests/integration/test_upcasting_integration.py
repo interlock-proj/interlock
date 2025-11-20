@@ -4,12 +4,12 @@ import pytest
 from pydantic import BaseModel
 from ulid import ULID
 
-from ouroboros.aggregates.aggregate import Aggregate
-from ouroboros.application.application import ApplicationBuilder
-from ouroboros.commands.command import Command
-from ouroboros.events import Event
-from ouroboros.events.upcasting import EventUpcaster
-from ouroboros.routing import applies_event, handles_command
+from interlock.aggregates.aggregate import Aggregate
+from interlock.application.application import ApplicationBuilder
+from interlock.commands.command import Command
+from interlock.events import Event
+from interlock.events.upcasting import EventUpcaster
+from interlock.routing import applies_event, handles_command
 
 
 # Event versions for testing
