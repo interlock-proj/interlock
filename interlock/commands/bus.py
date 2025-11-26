@@ -1,50 +1,27 @@
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Generic, TypeVar
+from functools import reduce
+from typing import Any, Callable, Coroutine, Generic, TypeVar
 
-from ..aggregates import AggregateRepository, AggregateRepositoryRegistry
+from ..aggregates import Aggregate, AggregateRepository
 from .command import Command
-from .registry import CommandTypeRegistry
-
-if TYPE_CHECKING:
-    from .middleware import CommandMiddlewareRegistry
 
 T = TypeVar("T", bound=Command)
 
 
-class CommandHandler(ABC, Generic[T]):
-    """Abstract base class for command handlers.
-
-    Command handlers contain the business logic for processing commands. Each handler
-    is responsible for a specific command type and implements the handle method.
-
-    Type Parameters:
-        T: The type of command this handler processes (must inherit from Command).
-    """
-
-    @abstractmethod
-    async def handle(self, command: T) -> None:
-        """Process the given command.
-
-        Args:
-            command: The command to process.
-        """
-        ...
+CommandHandler = Callable[[Command], Coroutine[Any, Any, None]]
 
 
 class CommandMiddleware(ABC, Generic[T]):
     """Abstract base class for command middleware.
 
-    Middleware components wrap command handlers to provide cross-cutting concerns
-    like logging, validation, authentication, or transaction management. They follow
-    the chain of responsibility pattern.
-
-    Type Parameters:
-        T: The type of command this middleware processes (must inherit from Command).
+    Middleware components wrap command handlers to provide cross-cutting
+    concerns like logging, validation, authentication, or transaction
+    management. They follow the chain of responsibility pattern.
     """
 
     @abstractmethod
-    async def handle(self, command: T, next: CommandHandler[T]) -> None:
-        """Process the command and optionally invoke the next handler in the chain.
+    async def handle(self, command: T, next: CommandHandler) -> None:
+        """Process the command and optionally invoke the next handler.
 
         Args:
             command: The command to process.
@@ -53,173 +30,140 @@ class CommandMiddleware(ABC, Generic[T]):
         ...
 
 
-class HandleWithMiddleware(CommandHandler[T]):
-    """Command handler decorator that applies middleware to an inner handler.
+class MiddlewareTypeFilter(ABC):
+    """Abstract base class for middleware type filters."""
 
-    Wraps an existing command handler with middleware functionality, allowing
-    cross-cutting concerns to be applied to command processing.
+    @staticmethod
+    def all() -> "MiddlewareTypeFilter":
+        return AllMiddlewareTypeFilter()
 
-    Attributes:
-        inner: The wrapped command handler.
-        middleware: The middleware to apply to the handler.
+    @staticmethod
+    def of_types(*command_types: type[Command]) -> "MiddlewareTypeFilter":
+        return OfTypesMiddlewareTypeFilter(command_types)
+
+    @staticmethod
+    def not_of_types(*command_types: type[Command]) -> "MiddlewareTypeFilter":
+        return NotMiddlewareTypeFilter(command_types)
+
+    @abstractmethod
+    def should_apply(self, command: type[Command]) -> bool: ...
+
+
+class AllMiddlewareTypeFilter(MiddlewareTypeFilter):
+    def should_apply(self, command: type[Command]) -> bool:
+        return True
+
+
+class OfTypesMiddlewareTypeFilter(MiddlewareTypeFilter):
+    def __init__(self, *command_types: type[Command]):
+        self.command_types = set(command_types)
+
+    def should_apply(self, command: type[Command]) -> bool:
+        return any(
+            issubclass(command, command_type) for command_type in self.command_types
+        )
+
+
+class NotMiddlewareTypeFilter(MiddlewareTypeFilter):
+    def __init__(self, *command_types: type[Command]):
+        self.command_types = set(command_types)
+
+    def should_apply(self, command: type[Command]) -> bool:
+        return not any(
+            issubclass(command, command_type) for command_type in self.command_types
+        )
+
+
+class HandleWithMiddleware:
+    """Command handler that wraps another command handler with middleware.
+
+    This handler is responsible for wrapping another command handler
+    with middleware. It will use the middleware type filter to determine
+    if a middleware should be applied to the command.
     """
 
-    __slots__ = ("inner", "middleware")
-
-    def __init__(self, inner: CommandHandler[T], middleware: CommandMiddleware[T]):
-        """Initialize the middleware-wrapped handler.
-
-        Args:
-            inner: The command handler to wrap.
-            middleware: The middleware to apply.
-        """
-        self.inner = inner
+    def __init__(self, middleware: CommandMiddleware, filter: MiddlewareTypeFilter):
         self.middleware = middleware
+        self.filter = filter
 
-    async def handle(self, command: T) -> None:
-        """Handle the command by passing it through the middleware chain.
-
-        Args:
-            command: The command to process.
-
-        Returns:
-            The result of the middleware and handler execution.
-        """
-        await self.middleware.handle(command, self.inner)
+    async def handle(self, command: Command, next: CommandHandler) -> None:
+        if self.filter.should_apply(type(command)):
+            await self.middleware.handle(command, next)
+        else:
+            await next(command)
 
 
-class DelegateToAggregate(CommandHandler[T]):
-    """Command handler that delegates command processing to domain aggregates.
+class CommandToAggregateMap:
+    @staticmethod
+    def from_aggregates(aggregates: list[Aggregate]) -> "CommandToAggregateMap":
+        map = CommandToAggregateMap()
+        for aggregate in aggregates:
+            map.add(aggregate)
+        return map
 
-    Retrieves the appropriate aggregate instance from the repository and
-    delegates the command handling to the aggregate's handle method. Uses
-    the aggregate repository's context manager to ensure proper lifecycle
-    management and persistence.
+    def __init__(self):
+        self.command_to_aggregate_map = {}
 
-    Attributes:
-        aggregate_repository: Repository for retrieving and persisting aggregates.
-    """
+    def add(self, aggregate_type: type[Aggregate]):
+        for value in aggregate_type.__dict__.values():
+            if hasattr(value, "_handles_command_type"):
+                command_type = value._handles_command_type
+                self.command_to_aggregate_map[command_type] = aggregate_type
 
-    __slots__ = ("aggregate_repository",)
+    def get(self, command_type: type[Command]) -> type[Aggregate]:
+        return self.command_to_aggregate_map[command_type]
 
-    def __init__(self, aggregate_repository: AggregateRepository) -> None:  # type: ignore[type-arg]
-        """Initialize the delegating handler.
 
-        Args:
-            aggregate_repository: The repository for managing aggregates.
-        """
-        self.aggregate_repository = aggregate_repository
+class AggregateToRepositoryMap:
 
-    async def handle(self, command: T) -> None:
-        """Retrieve the aggregate and delegate command handling to it.
+    @staticmethod
+    def from_repositories(
+        repositories: list[AggregateRepository],
+    ) -> "AggregateToRepositoryMap":
+        map = AggregateToRepositoryMap()
+        for repository in repositories:
+            map.add(repository)
+        return map
 
-        Args:
-            command: The command to process. The command's aggregate_id is used
-                     to retrieve the correct aggregate instance.
-        """
-        async with self.aggregate_repository.acquire(command.aggregate_id) as aggregate:
-            aggregate.handle(command)  # type: ignore[arg-type]
+    def __init__(self):
+        self.aggregate_to_repository_map = {}
+
+    def add(self, repository: AggregateRepository):
+        self.aggregate_to_repository_map[repository.aggregate_type] = repository
+
+    def get(self, aggregate_type: type[Aggregate]) -> AggregateRepository:
+        return self.aggregate_to_repository_map[aggregate_type]
+
+
+class DelegateToAggregate:
+    def __init__(
+        self,
+        command_to_aggregate_map: CommandToAggregateMap,
+        aggregate_to_repository_map: AggregateToRepositoryMap,
+    ):
+        self.command_to_aggregate_map = command_to_aggregate_map
+        self.aggregate_to_repository_map = aggregate_to_repository_map
+
+    async def handle(self, command: Command) -> None:
+        aggregate_type = self.command_to_aggregate_map.get(type(command))
+        repository = self.aggregate_to_repository_map.get(aggregate_type)
+        async with repository.acquire(command.aggregate_id) as aggregate:
+            aggregate.handle(command)
 
 
 class CommandBus:
-    """Central dispatcher for routing commands to their handlers.
-
-    The command bus provides a single point of entry for dispatching commands
-    in the system. It maps command types to their corresponding handlers and
-    executes them.
-    """
-
-    def __init__(self, handlers: dict[type[Command], CommandHandler[Command]]):
-        """Initialize the CommandBus with a handler mapping.
-
-        Args:
-            handlers: Mapping of command types to their handlers.
-        """
-        self.handlers = handlers
-
-    @classmethod
-    def create(
-        cls,
-        command_repositories: dict[type[Command], AggregateRepository],  # type: ignore[type-arg]
-        middlewares: list[tuple[CommandMiddleware[Command], type[Command]]],
-    ) -> "CommandBus":
-        """Create a CommandBus with handlers for each command type.
-
-        For each command type, creates a DelegateToAggregate handler and wraps it
-        with all applicable middlewares. Middlewares are applied if the command type
-        is a subclass of (or exactly matches) the middleware's target command type.
-
-        Args:
-            command_repositories: Mapping of command types to their aggregate repositories.
-            middlewares: List of (middleware_instance, target_command_type) tuples.
-
-        Returns:
-            A configured CommandBus instance.
-        """
-        handlers: dict[type[Command], CommandHandler[Command]] = {}
-
-        for command_type, repository in command_repositories.items():
-            applicable_middlewares = (
-                middleware
-                for middleware, target_type in middlewares
-                if issubclass(command_type, target_type)
-            )
-
-            handler: CommandHandler[Command] = DelegateToAggregate(repository)  # type: ignore[arg-type]
-            for middleware in applicable_middlewares:
-                handler = HandleWithMiddleware(handler, middleware)  # type: ignore[arg-type]
-
-            handlers[command_type] = handler
-
-        return cls(handlers)
-
-    @classmethod
-    def create_from_registries(
-        cls,
-        middleware_registry: "CommandMiddlewareRegistry",
-        repository_registry: AggregateRepositoryRegistry,
-        command_registry: CommandTypeRegistry,
-    ) -> "CommandBus":
-        """Factory method for creating CommandBus from registries.
-
-        Creates CommandBus with middleware and command→repository mappings.
-        All dependencies are injected by the DI container.
-
-        Args:
-            middleware_registry: Registry containing registered middleware
-            repository_registry: Registry containing aggregate repositories
-            command_registry: Registry containing command types
-
-        Returns:
-            Configured CommandBus instance
-
-        Examples:
-            This method is registered with the DI container and called automatically:
-
-            >>> container.register(CommandBus, CommandBus.create_from_registries)
-            >>> command_bus = container.resolve(CommandBus)
-        """
-        # Resolve all middleware from registry (types resolved via DI)
-        resolved_middlewares = middleware_registry.resolve_all()
-
-        # Map commands to repositories via introspection
-        command_types = command_registry.get_all()
-        command_repositories = repository_registry.get_all_for_commands(command_types)
-
-        return cls.create(
-            command_repositories=command_repositories, middlewares=resolved_middlewares
+    def __init__(
+        self,
+        root_handler: DelegateToAggregate,
+        middleware_handlers: list[HandleWithMiddleware],
+    ):
+        self.root_handler = root_handler
+        self.middleware_handlers = middleware_handlers
+        self.chain = reduce(
+            lambda next, handler: lambda cmd: handler.handle(cmd, next),
+            self.middleware_handlers,
+            self.root_handler.handle,
         )
 
     async def dispatch(self, command: Command) -> None:
-        """Dispatch a command to its registered handler.
-
-        Looks up the appropriate handler for the command's type and
-        executes it.
-
-        Args:
-            command: The command to dispatch.
-
-        Returns:
-            The result of the command handler execution.
-        """
-        await self.handlers[type(command)].handle(command)
+        await self.chain(command)

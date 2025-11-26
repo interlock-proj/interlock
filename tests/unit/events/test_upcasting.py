@@ -10,8 +10,8 @@ from interlock.events.upcasting import (
     EventUpcaster,
     LazyUpcastingStrategy,
     UpcastingPipeline,
-    extract_upcaster_types,
 )
+from interlock.events.upcasting.pipeline import extract_upcaster_types
 
 
 # Test event types (V1, V2, V3 for chain testing)
@@ -201,39 +201,37 @@ class TestUpcastingStrategy:
 class TestUpcastingPipeline:
     """Test the upcasting pipeline."""
 
-    def test_register_upcaster_with_instance(self):
+    def test_register_upcaster_with_instance(self, upcaster_map):
         """Should register upcaster instance."""
-        pipeline = UpcastingPipeline(LazyUpcastingStrategy())
         upcaster = AccountCreatedV1ToV2()
-        pipeline.register_upcaster(upcaster)
+        upcaster_map.register_upcaster(upcaster)
+        pipeline = UpcastingPipeline(LazyUpcastingStrategy(), upcaster_map)
 
-        assert AccountCreatedV1 in pipeline.upcasters
-        assert upcaster in pipeline.upcasters[AccountCreatedV1]
+        assert AccountCreatedV1 in upcaster_map.upcasters
+        assert upcaster in upcaster_map.upcasters[AccountCreatedV1]
 
-    def test_register_upcaster_with_class(self):
+    def test_register_upcaster_with_class(self, upcaster_map):
         """Should instantiate and register upcaster class."""
-        pipeline = UpcastingPipeline(LazyUpcastingStrategy())
-        pipeline.register_upcaster(AccountCreatedV1ToV2)
+        upcaster_map.register_upcaster(AccountCreatedV1ToV2())
+        pipeline = UpcastingPipeline(LazyUpcastingStrategy(), upcaster_map)
 
-        assert AccountCreatedV1 in pipeline.upcasters
-        assert len(pipeline.upcasters[AccountCreatedV1]) == 1
-        assert isinstance(pipeline.upcasters[AccountCreatedV1][0], AccountCreatedV1ToV2)
+        assert AccountCreatedV1 in upcaster_map.upcasters
+        assert len(upcaster_map.upcasters[AccountCreatedV1]) == 1
+        assert isinstance(upcaster_map.upcasters[AccountCreatedV1][0], AccountCreatedV1ToV2)
 
-    def test_register_upcaster_with_explicit_types(self):
+    def test_register_upcaster_with_explicit_types(self, upcaster_map):
         """Should support explicit type registration."""
-        pipeline = UpcastingPipeline(LazyUpcastingStrategy())
         upcaster = AccountCreatedV1ToV2()
-        pipeline.register_upcaster(
-            upcaster, source_type=AccountCreatedV1, target_type=AccountCreatedV2
-        )
+        upcaster_map.register_upcaster(upcaster)
+        pipeline = UpcastingPipeline(LazyUpcastingStrategy(), upcaster_map)
 
-        assert AccountCreatedV1 in pipeline.upcasters
+        assert AccountCreatedV1 in upcaster_map.upcasters
 
     @pytest.mark.asyncio
-    async def test_upcast_single_event(self):
+    async def test_upcast_single_event(self, upcaster_map):
         """Should upcast a single event."""
-        pipeline = UpcastingPipeline(LazyUpcastingStrategy())
-        pipeline.register_upcaster(AccountCreatedV1ToV2())
+        upcaster_map.register_upcaster(AccountCreatedV1ToV2())
+        pipeline = UpcastingPipeline(LazyUpcastingStrategy(), upcaster_map)
 
         event = Event(
             aggregate_id=ULID(),
@@ -247,9 +245,9 @@ class TestUpcastingPipeline:
         assert upcasted.data.last_name == "Doe"
 
     @pytest.mark.asyncio
-    async def test_upcast_returns_unchanged_if_no_upcaster(self):
+    async def test_upcast_returns_unchanged_if_no_upcaster(self, upcaster_map):
         """Should return event unchanged if no upcaster registered."""
-        pipeline = UpcastingPipeline(LazyUpcastingStrategy())
+        pipeline = UpcastingPipeline(LazyUpcastingStrategy(), upcaster_map)
 
         event = Event(
             aggregate_id=ULID(),
@@ -262,11 +260,11 @@ class TestUpcastingPipeline:
         assert isinstance(upcasted.data, AccountCreatedV1)
 
     @pytest.mark.asyncio
-    async def test_upcast_chain_v1_to_v3(self):
+    async def test_upcast_chain_v1_to_v3(self, upcaster_map):
         """Should chain multiple upcasters (V1→V2→V3)."""
-        pipeline = UpcastingPipeline(LazyUpcastingStrategy())
-        pipeline.register_upcaster(AccountCreatedV1ToV2())
-        pipeline.register_upcaster(AccountCreatedV2ToV3())
+        upcaster_map.register_upcaster(AccountCreatedV1ToV2())
+        upcaster_map.register_upcaster(AccountCreatedV2ToV3())
+        pipeline = UpcastingPipeline(LazyUpcastingStrategy(), upcaster_map)
 
         event = Event(
             aggregate_id=ULID(),
@@ -283,11 +281,11 @@ class TestUpcastingPipeline:
         assert upcasted.data.email == "bob.smith@example.com"
 
     @pytest.mark.asyncio
-    async def test_upcast_chain_stops_when_no_more_upcasters(self):
+    async def test_upcast_chain_stops_when_no_more_upcasters(self, upcaster_map):
         """Should stop chaining when no more upcasters match."""
-        pipeline = UpcastingPipeline(LazyUpcastingStrategy())
-        pipeline.register_upcaster(AccountCreatedV1ToV2())
+        upcaster_map.register_upcaster(AccountCreatedV1ToV2())
         # Note: No V2→V3 upcaster registered
+        pipeline = UpcastingPipeline(LazyUpcastingStrategy(), upcaster_map)
 
         event = Event(
             aggregate_id=ULID(),
@@ -301,7 +299,7 @@ class TestUpcastingPipeline:
         assert upcasted.data.first_name == "Alice"
 
     @pytest.mark.asyncio
-    async def test_upcast_chain_prevents_infinite_loops(self):
+    async def test_upcast_chain_prevents_infinite_loops(self, upcaster_map):
         """Should prevent infinite loops with max_steps."""
 
         # Create a truly circular chain: V1→V2→V1→V2...
@@ -313,9 +311,9 @@ class TestUpcastingPipeline:
             async def upcast_payload(self, data: AccountCreatedV2) -> AccountCreatedV1:
                 return AccountCreatedV1(owner_name=data.first_name)
 
-        pipeline = UpcastingPipeline(LazyUpcastingStrategy())
-        pipeline.register_upcaster(V1ToV2Circular())
-        pipeline.register_upcaster(V2ToV1Circular())
+        upcaster_map.register_upcaster(V1ToV2Circular())
+        upcaster_map.register_upcaster(V2ToV1Circular())
+        pipeline = UpcastingPipeline(LazyUpcastingStrategy(), upcaster_map)
 
         event = Event(
             aggregate_id=ULID(),
@@ -327,10 +325,10 @@ class TestUpcastingPipeline:
             await pipeline.upcast_chain(event, max_steps=5)
 
     @pytest.mark.asyncio
-    async def test_read_upcast_lazy_strategy(self):
+    async def test_read_upcast_lazy_strategy(self, upcaster_map):
         """Lazy strategy should upcast on read."""
-        pipeline = UpcastingPipeline(LazyUpcastingStrategy())
-        pipeline.register_upcaster(AccountCreatedV1ToV2())
+        upcaster_map.register_upcaster(AccountCreatedV1ToV2())
+        pipeline = UpcastingPipeline(LazyUpcastingStrategy(), upcaster_map)
 
         events = [
             Event(
@@ -351,10 +349,10 @@ class TestUpcastingPipeline:
         assert all(isinstance(e.data, AccountCreatedV2) for e in upcasted)
 
     @pytest.mark.asyncio
-    async def test_write_upcast_lazy_strategy(self):
+    async def test_write_upcast_lazy_strategy(self, upcaster_map):
         """Lazy strategy should NOT upcast on write."""
-        pipeline = UpcastingPipeline(LazyUpcastingStrategy())
-        pipeline.register_upcaster(AccountCreatedV1ToV2())
+        upcaster_map.register_upcaster(AccountCreatedV1ToV2())
+        pipeline = UpcastingPipeline(LazyUpcastingStrategy(), upcaster_map)
 
         events = [
             Event(
@@ -371,10 +369,10 @@ class TestUpcastingPipeline:
         assert isinstance(upcasted[0].data, AccountCreatedV1)
 
     @pytest.mark.asyncio
-    async def test_write_upcast_eager_strategy(self):
+    async def test_write_upcast_eager_strategy(self, upcaster_map):
         """Eager strategy should upcast on write."""
-        pipeline = UpcastingPipeline(EagerUpcastingStrategy())
-        pipeline.register_upcaster(AccountCreatedV1ToV2())
+        upcaster_map.register_upcaster(AccountCreatedV1ToV2())
+        pipeline = UpcastingPipeline(EagerUpcastingStrategy(), upcaster_map)
 
         events = [
             Event(
@@ -389,10 +387,10 @@ class TestUpcastingPipeline:
         assert isinstance(upcasted[0].data, AccountCreatedV2)
 
     @pytest.mark.asyncio
-    async def test_conditional_upcaster_respects_can_upcast(self):
+    async def test_conditional_upcaster_respects_can_upcast(self, upcaster_map):
         """Should respect can_upcast predicate."""
-        pipeline = UpcastingPipeline(LazyUpcastingStrategy())
-        pipeline.register_upcaster(ConditionalUpcaster())
+        upcaster_map.register_upcaster(ConditionalUpcaster())
+        pipeline = UpcastingPipeline(LazyUpcastingStrategy(), upcaster_map)
 
         # Event that should be upcasted (has space)
         event_yes = Event(

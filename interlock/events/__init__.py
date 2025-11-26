@@ -24,14 +24,11 @@ from .processing import (
     CheckpointBackend,
     EventProcessor,
     EventProcessorExecutor,
-    EventProcessorRegistry,
     FromAggregateSnapshot,
     FromReplayingEvents,
     InMemoryCheckpointBackend,
     Never,
     NoCatchup,
-    ProcessorConfigRegistry,
-    ProcessorExecutionConfig,
 )
 from .store import EventStore, InMemoryEventStore
 from .transport import EventSubscription, EventTransport, InMemoryEventTransport
@@ -39,11 +36,9 @@ from .upcasting import (
     EagerUpcastingStrategy,
     EventUpcaster,
     LazyUpcastingStrategy,
-    UpcastingConfig,
     UpcastingPipeline,
-    UpcastingRegistry,
+    UpcasterMap,
     UpcastingStrategy,
-    extract_upcaster_types,
 )
 
 __all__ = [
@@ -77,9 +72,6 @@ __all__ = [
     "AfterNAge",
     "AnyOf",
     "AllOf",
-    "ProcessorExecutionConfig",
-    "ProcessorConfigRegistry",
-    "EventProcessorRegistry",
     # Checkpoint infrastructure
     "Checkpoint",
     "CheckpointBackend",
@@ -91,7 +83,5 @@ __all__ = [
     "LazyUpcastingStrategy",
     "EagerUpcastingStrategy",
     "UpcastingPipeline",
-    "UpcastingConfig",
-    "UpcastingRegistry",
-    "extract_upcaster_types",
+    "UpcasterMap",
 ]

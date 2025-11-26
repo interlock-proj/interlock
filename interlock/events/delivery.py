@@ -13,7 +13,7 @@ from abc import ABC, abstractmethod
 from typing import Any
 
 from .event import Event
-from .processing import EventProcessor, EventProcessorRegistry
+from .processing import EventProcessor
 from .transport import EventSubscription, EventTransport
 
 
@@ -95,26 +95,6 @@ class SynchronousDelivery(EventDelivery):
         """
         self.transport = transport
         self.processors = processors
-
-    @classmethod
-    def create_from_registry(
-        cls,
-        transport: EventTransport,
-        processor_registry: EventProcessorRegistry,
-    ) -> "SynchronousDelivery":
-        """Factory method for creating SynchronousDelivery from processor registry.
-
-        This is used by the DI container to automatically resolve processors.
-
-        Args:
-            transport: Event transport for publishing
-            processor_registry: Registry containing all registered processors
-
-        Returns:
-            Configured SynchronousDelivery instance
-        """
-        processors = processor_registry.resolve_all()
-        return cls(transport, processors)
 
     async def deliver(self, events: list[Event[Any]]) -> None:
         """Publish events and execute processors immediately.

@@ -152,7 +152,7 @@ class ExecutionTracker(CommandMiddleware):
 
     async def handle(self, command: Command, next: CommandHandler):
         self.executions.append(("start", type(command).__name__))
-        result = await next.handle(command)
+        result = await next(command)
         self.executions.append(("end", type(command).__name__))
         return result
 
@@ -236,6 +236,30 @@ def execution_tracker() -> ExecutionTracker:
 
 
 @pytest.fixture
+def upcaster_map():
+    """Create an empty UpcasterMap for testing."""
+    from interlock.events.upcasting.pipeline import UpcasterMap
+
+    return UpcasterMap()
+
+
+@pytest.fixture
+def command_handler(counter_app):
+    """Resolve DelegateToAggregate from counter app."""
+    from interlock.commands.bus import DelegateToAggregate
+
+    return counter_app.resolve(DelegateToAggregate)
+
+
+@pytest.fixture
+def middleware_filter(counter_app):
+    """Resolve MiddlewareTypeFilter from counter app."""
+    from interlock.commands.bus import MiddlewareTypeFilter
+
+    return counter_app.resolve(MiddlewareTypeFilter)
+
+
+@pytest.fixture
 def base_app_builder(
     event_store: InMemoryEventStore, event_transport: InMemoryEventTransport
 ) -> ApplicationBuilder:
@@ -254,8 +278,8 @@ def base_app_builder(
     """
     return (
         ApplicationBuilder()
-        .add_dependency(EventStore, event_store)
-        .add_dependency(InMemoryEventTransport, event_transport)
+        .register_dependency(EventStore, lambda: event_store)
+        .register_dependency(InMemoryEventTransport, lambda: event_transport)
     )
 
 
@@ -266,10 +290,7 @@ def counter_app(base_app_builder: ApplicationBuilder):
     This is a convenience fixture for tests that need a simple counter app.
     """
     return (
-        base_app_builder.add_aggregate(Counter)
-        .add_command(IncrementCounter)
-        .add_command(SetName)
-        .use_synchronous_processing()
+        base_app_builder.register_aggregate(Counter)
         .build()
     )
 
@@ -281,11 +302,7 @@ def bank_account_app(base_app_builder: ApplicationBuilder):
     This is a convenience fixture for tests that need a bank account app.
     """
     return (
-        base_app_builder.add_aggregate(BankAccount)
-        .add_command(OpenAccount)
-        .add_command(DepositMoney)
-        .add_command(WithdrawMoney)
-        .use_synchronous_processing()
+        base_app_builder.register_aggregate(BankAccount)
         .build()
     )
 

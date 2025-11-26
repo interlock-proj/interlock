@@ -1,13 +1,10 @@
 from abc import ABC, abstractmethod
 from asyncio import gather
-from collections import defaultdict
 from typing import Any, Generic, TypeVar, get_args
 
 from pydantic import BaseModel
 
 from ..event import Event
-from .config import UpcastingConfig
-from .registry import UpcastingRegistry
 from .strategies import UpcastingStrategy
 
 T = TypeVar("T", bound=BaseModel)
@@ -138,59 +135,41 @@ class EventUpcaster(Generic[T, U], ABC):
         ...
 
 
+class UpcasterMap:
+    def from_upcasters(upcasters: list[EventUpcaster[Any, Any]]) -> "UpcasterMap":
+        map = UpcasterMap()
+        for upcaster in upcasters:
+            map.register_upcaster(upcaster)
+        return map
+
+    def __init__(self):
+        self.upcasters: dict[type[BaseModel], list[EventUpcaster[Any, Any]]] = {}
+
+    def register_upcaster(self, upcaster: EventUpcaster[Any, Any]):
+        source_type, _ = extract_upcaster_types(type(upcaster))
+        if source_type not in self.upcasters:
+            self.upcasters[source_type] = []
+        self.upcasters[source_type].append(upcaster)
+
+    def get_upcasters(
+        self, source_type: type[BaseModel]
+    ) -> list[EventUpcaster[Any, Any]]:
+        return self.upcasters.get(source_type, [])
+
+
 class UpcastingPipeline:
     """Pipeline for applying event upcasting transformations.
 
-    The pipeline manages a registry of upcasters and applies them to events
+    The pipeline manages a mapping of upcasters and applies them to events
     based on the configured strategy. It supports multi-step upcasting chains
     where events can be transformed through multiple versions (V1→V2→V3).
     """
 
-    def __init__(self, upcasting_strategy: UpcastingStrategy):
-        """Initialize the upcasting pipeline.
-
-        Args:
-            upcasting_strategy: Strategy controlling when to apply upcasting
-        """
+    def __init__(
+        self, upcasting_strategy: UpcastingStrategy, upcaster_map: UpcasterMap
+    ):
         self.upcasting_strategy = upcasting_strategy
-        # Map from source event type to list of upcasters that can transform it
-        self.upcasters: dict[type[BaseModel], list[EventUpcaster[Any, Any]]] = defaultdict(list)
-
-    def register_upcaster(
-        self,
-        upcaster: EventUpcaster[T, U] | type[EventUpcaster[T, U]],
-        source_type: type[T] | None = None,
-        target_type: type[U] | None = None,
-    ) -> None:
-        """Register an upcaster with the pipeline.
-
-        The source and target types are automatically extracted from the upcaster's
-        generic type parameters if not provided explicitly.
-
-        Args:
-            upcaster: The upcaster instance or class to register
-            source_type: Optional explicit source type (auto-detected if None)
-            target_type: Optional explicit target type (auto-detected if None)
-
-        Raises:
-            ValueError: If types cannot be extracted from the upcaster
-
-        Example:
-            >>> pipeline.register_upcaster(MyUpcaster())  # Types auto-detected
-            >>> pipeline.register_upcaster(MyUpcaster, OldEvent, NewEvent)  # Explicit
-        """
-        # Instantiate if we got a class
-        if isinstance(upcaster, type):
-            upcaster = upcaster()
-
-        # Extract types if not provided
-        if source_type is None or target_type is None:
-            detected_source, detected_target = extract_upcaster_types(type(upcaster))
-            source_type = source_type or detected_source
-            target_type = target_type or detected_target
-
-        # Register keyed by source type
-        self.upcasters[source_type].append(upcaster)
+        self.upcaster_map = upcaster_map
 
     async def upcast(self, event: Event[Any]) -> Event[Any]:
         """Apply upcasting transformations to a single event.
@@ -207,7 +186,7 @@ class UpcastingPipeline:
         event_data_type = type(event.data)
 
         # Find upcasters for this event type
-        for upcaster in self.upcasters.get(event_data_type, []):
+        for upcaster in self.upcaster_map.get_upcasters(event_data_type):
             if await upcaster.can_upcast(event):
                 return await upcaster.upcast_event(event)
 
@@ -270,34 +249,3 @@ class UpcastingPipeline:
         if self.upcasting_strategy.should_upcast_on_write():
             return list(await gather(*[self.upcast_chain(event) for event in events]))
         return events
-
-    @classmethod
-    def create_from_registry(
-        cls, config: UpcastingConfig, registry: UpcastingRegistry
-    ) -> "UpcastingPipeline":
-        """Factory method for creating UpcastingPipeline from registry.
-
-        Creates pipeline with configured strategy and registers all upcasters
-        from the registry. Dependencies are injected by the DI container.
-
-        Args:
-            config: Upcasting configuration (contains strategy)
-            registry: Registry containing registered upcasters
-
-        Returns:
-            Configured UpcastingPipeline instance
-
-        Examples:
-            This method is registered with the DI container and called automatically:
-
-            >>> container.register(UpcastingPipeline, UpcastingPipeline.create_from_registry)
-            >>> pipeline = container.resolve(UpcastingPipeline)
-        """
-        # Create pipeline with configured strategy
-        pipeline = cls(config.strategy)
-
-        # Register all upcasters from registry (types resolved via DI)
-        for upcaster in registry.resolve_all():
-            pipeline.register_upcaster(upcaster)
-
-        return pipeline

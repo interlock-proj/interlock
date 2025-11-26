@@ -4,24 +4,20 @@ from .aggregate import Aggregate
 from .exceptions import ConcurrencyError
 from .repository import (
     AggregateCacheBackend,
+    AggregateFactory,
     AggregateRepository,
-    AggregateRepositoryRegistry,
     AggregateSnapshotStorageBackend,
     AggregateSnapshotStrategy,
     CacheStrategy,
-    RepositoryConfig,
-    RepositoryConfigRegistry,
 )
 
 __all__ = [
     "Aggregate",
     "AggregateRepository",
-    "AggregateRepositoryRegistry",
+    "AggregateFactory",
     "AggregateCacheBackend",
     "CacheStrategy",
     "AggregateSnapshotStorageBackend",
     "AggregateSnapshotStrategy",
     "ConcurrencyError",
-    "RepositoryConfig",
-    "RepositoryConfigRegistry",
 ]

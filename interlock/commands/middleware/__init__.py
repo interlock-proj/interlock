@@ -8,7 +8,6 @@ from .idempotency import (
     NullIdempotencyStorageBackend,
 )
 from .logging import LoggingMiddleware
-from .registry import CommandMiddlewareRegistry
 
 __all__ = (
     "LoggingMiddleware",
@@ -19,5 +18,4 @@ __all__ = (
     "NullIdempotencyStorageBackend",
     "InMemoryIdempotencyStorageBackend",
     "IdempotencyTrackedCommand",
-    "CommandMiddlewareRegistry",
 )

@@ -78,11 +78,9 @@ class EventProcessorExecutor(Generic[P]):
 
     def __init__(
         self,
-        subscription: EventSubscription,
         processor: P,
         condition: CatchupCondition,
         strategy: CatchupStrategy[P],
-        batch_size: int,
     ) -> None:
         """Initialize the executor with its dependencies.
 
@@ -96,16 +94,16 @@ class EventProcessorExecutor(Generic[P]):
         Raises:
             ValueError: If batch_size <= 0
         """
-        if batch_size <= 0:
-            raise ValueError("Batch size must be positive")
-
-        self.subscription = subscription
         self.processor = processor
         self.condition = condition
         self.strategy = strategy
-        self.batch_size = batch_size
+        self.batch_size = 1000
 
-    async def process_event_batch(self, catchup_result: CatchupResult | None = None) -> timedelta:
+    async def process_event_batch(
+        self,
+        subscription: EventSubscription,
+        catchup_result: CatchupResult | None = None,
+    ) -> timedelta:
         """Process a batch of events and calculate average event age.
 
         Pulls batch_size events from the subscription, routes each to the
@@ -124,7 +122,8 @@ class EventProcessorExecutor(Generic[P]):
         The context is cleared after each event to prevent leakage.
 
         Args:
-            catchup_result: Optional skip window from catchup operation
+            subscription: The subscription to pull events from.
+            catchup_result: The skip window from catchup operation (Optional)
 
         Returns:
             Average time between event.timestamp and processing time
@@ -137,7 +136,7 @@ class EventProcessorExecutor(Generic[P]):
         events_processed = 0
 
         for _ in range(self.batch_size):
-            event = await self.subscription.next()
+            event = await subscription.next()
             total_lag_time += utc_now() - event.timestamp
 
             # Skip events in the skip window (already processed during catchup)
@@ -147,12 +146,13 @@ class EventProcessorExecutor(Generic[P]):
             events_processed += 1
 
             # Restore context from event metadata before processing
-            # This allows event processors to dispatch commands with proper causation
+            # This allows event processors to dispatch commands with proper
+            # causation
             if event.correlation_id is not None:
                 ctx = ExecutionContext(
                     correlation_id=event.correlation_id,
-                    causation_id=event.id,  # This event is the cause for any new commands
-                    command_id=None,  # Not in a command context
+                    causation_id=event.id,
+                    command_id=None,
                 )
                 set_context(ctx)
 
@@ -168,7 +168,7 @@ class EventProcessorExecutor(Generic[P]):
 
         return total_lag_time / self.batch_size
 
-    async def run(self) -> None:
+    async def run(self, subscription: EventSubscription) -> None:
         """Run the event processing loop continuously.
 
         This method runs indefinitely, processing events in batches and
@@ -191,19 +191,20 @@ class EventProcessorExecutor(Generic[P]):
 
         while True:
             # Process batch and measure lag
-            average_event_age = await self.process_event_batch(catchup_result)
+            average_event_age = await self.process_event_batch(
+                subscription=subscription,
+                catchup_result=catchup_result,
+            )
             lag = Lag(
                 average_event_age=average_event_age,
-                unprocessed_events=await self.subscription.depth(),
+                unprocessed_events=await subscription.depth(),
             )
 
             # Clear skip window if we've processed an event beyond it
             # (The skip window is a one-time thing after catchup)
             if catchup_result is not None:
-                # Skip window is cleared implicitly by process_event_batch
-                # Once we process events beyond skip_before, we're caught up
-                # For simplicity, we'll clear it after the first batch
-                # that had a chance to process non-skipped events
+                # Skip window is cleared implicitly by process_event_batch.
+                # Once we process events beyond skip_before, we're caught up.
                 catchup_result = None
 
             # Trigger catchup if condition met

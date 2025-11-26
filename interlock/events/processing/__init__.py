@@ -13,11 +13,9 @@ This package provides:
 
 from .checkpoint import Checkpoint, CheckpointBackend, InMemoryCheckpointBackend
 from .conditions import AfterNAge, AfterNEvents, AllOf, AnyOf, CatchupCondition, Never
-from .config import ProcessorConfigRegistry, ProcessorExecutionConfig
 from .executor import EventProcessorExecutor
 from .processor import EventProcessor
 from .projectors import AggregateProjector
-from .registry import EventProcessorRegistry
 from .saga import Saga, saga_step
 from .saga_state_store import InMemorySagaStateStore, NullSagaStateStore, SagaStateStore
 from .strategies import (
@@ -57,8 +55,4 @@ __all__ = [
     "InMemoryCheckpointBackend",
     # Projector infrastructure
     "AggregateProjector",
-    # Configuration and registry
-    "ProcessorExecutionConfig",
-    "ProcessorConfigRegistry",
-    "EventProcessorRegistry",
 ]

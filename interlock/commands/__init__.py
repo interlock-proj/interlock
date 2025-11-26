@@ -4,10 +4,11 @@ from .bus import (
     CommandMiddleware,
     DelegateToAggregate,
     HandleWithMiddleware,
+    CommandToAggregateMap,
+    AggregateToRepositoryMap,
+    MiddlewareTypeFilter,
 )
 from .command import Command
-from .middleware import CommandMiddlewareRegistry
-from .registry import CommandTypeRegistry
 
 __all__ = (
     "Command",
@@ -16,6 +17,7 @@ __all__ = (
     "CommandHandler",
     "DelegateToAggregate",
     "HandleWithMiddleware",
-    "CommandTypeRegistry",
-    "CommandMiddlewareRegistry",
+    "CommandToAggregateMap",
+    "AggregateToRepositoryMap",
+    "MiddlewareTypeFilter",
 )

@@ -15,6 +15,21 @@ if TYPE_CHECKING:
 A = TypeVar("A", bound="Aggregate")
 
 
+class AggregateFactory(Generic[A]):
+    """Factory for creating aggregate instances of a specific type."""
+    
+    def __init__(self, aggregate_type: type[A]):
+        self._aggregate_type = aggregate_type
+    
+    def get_type(self) -> type[A]:
+        """Get the aggregate type this factory produces."""
+        return self._aggregate_type
+    
+    def create(self, aggregate_id: ULID) -> A:
+        """Create a new aggregate instance with the given ID."""
+        return self._aggregate_type(id=aggregate_id)
+
+
 class AggregateRepository(Generic[A]):
     """A mechanism for loading and saving aggregates in a consistent way.
 
@@ -41,14 +56,14 @@ class AggregateRepository(Generic[A]):
 
     def __init__(
         self,
-        aggregate_type: type[A],
+        aggregate_factory: AggregateFactory[A],
         event_bus: EventBus,
         snapshot_strategy: AggregateSnapshotStrategy,
         cache_strategy: CacheStrategy,
         snapshot_backend: AggregateSnapshotStorageBackend,
         cache_backend: AggregateCacheBackend,
     ):
-        self.aggregate_type = aggregate_type
+        self.aggregate_type = aggregate_factory.get_type()
         self.event_bus = event_bus
         self.snapshot_strategy = snapshot_strategy
         self.cache_strategy = cache_strategy

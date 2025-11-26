@@ -29,7 +29,7 @@ class ConcurrencyRetryMiddleware(CommandMiddleware[T]):
         self.max_retries = max_retries
         self.retry_delay = retry_delay
 
-    async def handle(self, command: T, next: CommandHandler[T]) -> None:
+    async def handle(self, command: T, next: CommandHandler) -> None:
         last_error: ConcurrencyError | None = None
         for attempt in range(self.max_retries):
             try:

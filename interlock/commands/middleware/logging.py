@@ -48,7 +48,7 @@ class LoggingMiddleware(CommandMiddleware[Command]):
         """
         self.level = getattr(logging, level.upper())
 
-    async def handle(self, command: T, next: CommandHandler[T]) -> None:
+    async def handle(self, command: T, next: CommandHandler) -> None:
         """Log the command type with correlation context and pass to next handler.
 
         Args:

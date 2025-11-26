@@ -62,7 +62,7 @@ class ContextPropagationMiddleware(CommandMiddleware[Command]):
         ApplicationBuilder.use_correlation_tracking().
     """
 
-    async def handle(self, command: T, next: CommandHandler[T]) -> None:
+    async def handle(self, command: T, next: CommandHandler) -> None:
         """Set up execution context and pass command to next handler.
 
         The context is cleared after command execution (even on failure) to prevent

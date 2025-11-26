@@ -57,9 +57,7 @@ class IdempotencyMiddleware(CommandMiddleware[IdempotencyTrackedCommand]):
         self.idempotency_storage_backend = idempotency_storage_backend
 
     async def handle(
-        self,
-        command: IdempotencyTrackedCommand,
-        next: CommandHandler[IdempotencyTrackedCommand],
+        self, command: IdempotencyTrackedCommand, next: CommandHandler
     ) -> None:
         if await self.idempotency_storage_backend.has_processed_command(command):
             LOGGER.warning(
