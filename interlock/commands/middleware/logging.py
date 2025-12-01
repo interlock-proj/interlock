@@ -1,55 +1,59 @@
 import logging
-from typing import TypeVar
 
 from ...context import get_context
+from ...routing import intercepts
 from ..bus import CommandHandler, CommandMiddleware
 from ..command import Command
 
 LOGGER = logging.getLogger(__name__)
-T = TypeVar("T", bound=Command)
 
 
-class LoggingMiddleware(CommandMiddleware[Command]):
-    """Middleware that logs command execution with correlation tracking.
+class LoggingMiddleware(CommandMiddleware):
+    """Middleware that logs command execution with correlation.
 
-    Logs each command received at the specified logging level with the command
-    type and correlation/causation IDs for distributed tracing. Command data is
-    NOT logged to avoid exposing PII or sensitive information.
+    Logs each command received at the specified logging level with the
+    command type and correlation/causation IDs for distributed tracing.
+    Command data is NOT logged to avoid exposing PII or sensitive
+    information.
 
     Attributes:
-        level: The numeric logging level (e.g., logging.INFO, logging.DEBUG).
+        level: The numeric logging level (e.g., logging.INFO,
+            logging.DEBUG).
 
     Examples:
         Basic usage:
 
         >>> app = (ApplicationBuilder()
-        ...     .add_middleware(Command, LoggingMiddleware("INFO"))
+        ...     .register_middleware(LoggingMiddleware)
         ...     .build())
 
         With correlation tracking:
 
         >>> app = (ApplicationBuilder()
-        ...     .use_correlation_tracking()  # Enables ContextPropagationMiddleware
-        ...     .add_middleware(Command, LoggingMiddleware("INFO"))
+        ...     .use_correlation_tracking()
+        ...     .register_middleware(LoggingMiddleware)
         ...     .build())
-        >>> # Logs will now include correlation_id, causation_id, command_id
 
     Note:
-        For correlation tracking to work, ContextPropagationMiddleware should
-        be registered before LoggingMiddleware in the middleware chain.
+        For correlation tracking to work, ContextPropagationMiddleware
+        should be registered before LoggingMiddleware in the
+        middleware chain.
     """
 
     def __init__(self, level: str):
         """Initialize the logging middleware.
 
         Args:
-            level: String representation of the log level (e.g., "INFO", "DEBUG").
-                   Case-insensitive.
+            level: String representation of the log level (e.g.,
+                "INFO", "DEBUG"). Case-insensitive.
         """
         self.level = getattr(logging, level.upper())
 
-    async def handle(self, command: T, next: CommandHandler) -> None:
-        """Log the command type with correlation context and pass to next handler.
+    @intercepts
+    async def log_command(
+        self, command: Command, next: CommandHandler
+    ) -> None:
+        """Log the command type with correlation context.
 
         Args:
             command: The command to log and process.
@@ -71,4 +75,4 @@ class LoggingMiddleware(CommandMiddleware[Command]):
             extra["command_id"] = str(ctx.command_id)
 
         LOGGER.log(self.level, "Received Command", extra=extra)
-        await next.handle(command)
+        await next(command)

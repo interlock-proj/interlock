@@ -1,20 +1,3 @@
-"""Context management for correlation and causation tracking.
-
-This module provides thread-safe and async-safe context storage using Python's
-contextvars. It enables distributed tracing across commands, events, and event
-processors in the interlock framework.
-
-Key concepts:
-- **Correlation ID**: Traces an entire logical operation across all commands and events
-- **Causation ID**: Identifies what directly caused this message (command/event ID)
-- **Command ID**: Unique identifier for the current command being executed
-
-Context flows:
-1. HTTP Request → Command (correlation_id generated, causation_id = correlation_id)
-2. Command → Events (events inherit correlation_id, causation_id = command_id)
-3. Event → Saga Command (inherits correlation_id, causation_id = event_id)
-"""
-
 import contextvars
 from dataclasses import dataclass, replace
 

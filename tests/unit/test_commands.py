@@ -3,13 +3,14 @@ import logging
 import pytest
 from ulid import ULID
 
-from interlock.commands import (
-    CommandBus,
-    DelegateToAggregate,
-    HandleWithMiddleware,
-)
+from interlock.commands import CommandBus, DelegateToAggregate
 from interlock.commands.middleware import LoggingMiddleware
-from tests.conftest import Counter, ExecutionTracker, IncrementCounter, SetName
+from tests.conftest import (
+    Counter,
+    ExecutionTracker,
+    IncrementCounter,
+    SetName,
+)
 
 
 @pytest.mark.asyncio
@@ -42,12 +43,13 @@ async def test_delegate_to_aggregate_handles_multiple_commands(
 
 @pytest.mark.asyncio
 async def test_middleware_wraps_handler_execution(
-    aggregate_id: ULID, command_handler, middleware_filter, execution_tracker: ExecutionTracker
+    aggregate_id: ULID,
+    command_handler,
+    execution_tracker: ExecutionTracker,
 ):
-    wrapped = HandleWithMiddleware(execution_tracker, middleware_filter)
     command = IncrementCounter(aggregate_id=aggregate_id, amount=1)
 
-    await wrapped.handle(command, command_handler.handle)
+    await execution_tracker.intercept(command, command_handler.handle)
 
     assert execution_tracker.executions == [
         ("start", "IncrementCounter"),
@@ -56,16 +58,18 @@ async def test_middleware_wraps_handler_execution(
 
 
 @pytest.mark.asyncio
-async def test_multiple_middlewares_execute_in_order(aggregate_id: ULID, command_handler, middleware_filter):
+async def test_multiple_middlewares_execute_in_order(
+    aggregate_id: ULID, command_handler
+):
     tracker1 = ExecutionTracker()
     tracker2 = ExecutionTracker()
 
-    wrapped1 = HandleWithMiddleware(tracker1, middleware_filter)
-    wrapped2 = HandleWithMiddleware(tracker2, middleware_filter)
-
     command = IncrementCounter(aggregate_id=aggregate_id, amount=1)
     # Chain: tracker2 -> tracker1 -> command_handler
-    await wrapped2.handle(command, lambda cmd: wrapped1.handle(cmd, command_handler.handle))
+    await tracker2.intercept(
+        command,
+        lambda cmd: tracker1.intercept(cmd, command_handler.handle),
+    )
 
     assert tracker2.executions[0] == ("start", "IncrementCounter")
     assert tracker1.executions[0] == ("start", "IncrementCounter")
@@ -82,12 +86,14 @@ def test_logging_middleware_accepts_log_levels():
 
 
 @pytest.mark.asyncio
-async def test_logging_middleware_logs_commands(aggregate_id: ULID, caplog, command_handler):
+async def test_logging_middleware_logs_commands(
+    aggregate_id: ULID, caplog, command_handler
+):
     middleware = LoggingMiddleware("INFO")
     command = IncrementCounter(aggregate_id=aggregate_id, amount=5)
 
     with caplog.at_level(logging.INFO):
-        await middleware.handle(command, command_handler)
+        await middleware.intercept(command, command_handler.handle)
 
     assert "Received Command" in caplog.text
 
@@ -146,13 +152,10 @@ async def test_create_applies_middleware_to_matching_commands(
     base_app_builder,
     event_store,
 ):
-    from interlock.commands.bus import MiddlewareTypeFilter
-
+    # Middleware now uses @intercepts with specific command types
     app = (
         base_app_builder.register_aggregate(Counter)
-        .register_middleware(
-            ExecutionTracker, MiddlewareTypeFilter.of_types(IncrementCounter)
-        )
+        .register_middleware(ExecutionTracker)
         .build()
     )
 
@@ -170,20 +173,17 @@ async def test_create_applies_middleware_to_all_subclasses(
     base_app_builder,
     event_store,
 ):
-    from interlock.commands.bus import MiddlewareTypeFilter
-
+    # Middleware intercepts base Command type, applies to all
     app = (
         base_app_builder.register_aggregate(Counter)
-        .register_middleware(
-            ExecutionTracker, MiddlewareTypeFilter.of_types(IncrementCounter)
-        )
+        .register_middleware(ExecutionTracker)
         .build()
     )
 
     await app.dispatch(IncrementCounter(aggregate_id=aggregate_id, amount=3))
     await app.dispatch(SetName(aggregate_id=aggregate_id, name="tracked"))
 
-    # Verify both commands executed (middleware filters correctly)
+    # Verify both commands executed
     events = await event_store.load_events(aggregate_id, 1)
     assert len(events) == 2
     assert events[0].data.amount == 3
@@ -194,19 +194,31 @@ async def test_create_applies_middleware_to_all_subclasses(
 async def test_create_does_not_apply_non_matching_middleware(
     aggregate_id: ULID, base_app_builder, event_store
 ):
-    from interlock.commands.bus import MiddlewareTypeFilter
+    from interlock.routing import intercepts
 
-    # Register two tracker types to ensure they're treated as different middleware
-    class Tracker1(ExecutionTracker):
-        pass
+    # Create middleware that only intercept specific command types
+    class IncrementTracker(ExecutionTracker):
+        @intercepts
+        async def track_increment(
+            self, command: IncrementCounter, next
+        ):
+            self.executions.append(("start", type(command).__name__))
+            result = await next(command)
+            self.executions.append(("end", type(command).__name__))
+            return result
 
-    class Tracker2(ExecutionTracker):
-        pass
+    class SetNameTracker(ExecutionTracker):
+        @intercepts
+        async def track_setname(self, command: SetName, next):
+            self.executions.append(("start", type(command).__name__))
+            result = await next(command)
+            self.executions.append(("end", type(command).__name__))
+            return result
 
     app = (
         base_app_builder.register_aggregate(Counter)
-        .register_middleware(Tracker1, MiddlewareTypeFilter.of_types(IncrementCounter))
-        .register_middleware(Tracker2, MiddlewareTypeFilter.of_types(SetName))
+        .register_middleware(IncrementTracker)
+        .register_middleware(SetNameTracker)
         .build()
     )
 

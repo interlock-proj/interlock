@@ -19,7 +19,7 @@ from interlock.commands import Command, CommandHandler, CommandMiddleware
 from interlock.events import InMemoryEventTransport
 from interlock.events.processing import InMemorySagaStateStore
 from interlock.events.store import EventStore, InMemoryEventStore
-from interlock.routing import applies_event, handles_command
+from interlock.routing import applies_event, handles_command, intercepts
 
 
 class IncrementCounter(Command):
@@ -150,7 +150,10 @@ class ExecutionTracker(CommandMiddleware):
     def __init__(self):
         self.executions = []
 
-    async def handle(self, command: Command, next: CommandHandler):
+    @intercepts
+    async def track_execution(
+        self, command: Command, next: CommandHandler
+    ):
         self.executions.append(("start", type(command).__name__))
         result = await next(command)
         self.executions.append(("end", type(command).__name__))
@@ -249,14 +252,6 @@ def command_handler(counter_app):
     from interlock.commands.bus import DelegateToAggregate
 
     return counter_app.resolve(DelegateToAggregate)
-
-
-@pytest.fixture
-def middleware_filter(counter_app):
-    """Resolve MiddlewareTypeFilter from counter app."""
-    from interlock.commands.bus import MiddlewareTypeFilter
-
-    return counter_app.resolve(MiddlewareTypeFilter)
 
 
 @pytest.fixture

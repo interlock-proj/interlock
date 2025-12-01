@@ -15,12 +15,9 @@ from ..commands import (
     Command,
     CommandBus,
     CommandMiddleware,
-    CommandHandler,
     DelegateToAggregate,
     CommandToAggregateMap,
     AggregateToRepositoryMap,
-    MiddlewareTypeFilter,
-    HandleWithMiddleware,
 )
 from ..events import (
     EventBus,
@@ -67,9 +64,9 @@ class Application:
     def resolve(self, type_to_resolve: type[T]) -> T:
         """Resolve a dependency from the application.
 
-        This method will resolve a dependency from the application. The
-        dependency will be resolved from the contextual binding and will be
-        returned.
+        This method will resolve a dependency from the application.
+        The dependency will be resolved from the contextual binding
+        and will be returned.
 
         Args:
             type_to_resolve: The type of the dependency to resolve.
@@ -78,11 +75,14 @@ class Application:
             The resolved dependency.
 
         Raises:
-            DependencyNotFoundError: If the dependency cannot be resolved.
+            DependencyNotFoundError: If the dependency cannot be
+                resolved.
         """
         return self.contextual_binding.resolve(type_to_resolve)
 
-    async def run_event_processors(self, *processors: type[EventProcessor]) -> None:
+    async def run_event_processors(
+        self, *processors: type[EventProcessor]
+    ) -> None:
         """Run the event processors for the application.
 
         This method will run the event processors for the application of the
@@ -211,10 +211,6 @@ class ApplicationBuilder:
             dependency_type=AggregateToRepositoryMap,
             factory=self._build_aggregate_to_repository_map,
         )
-        self.container.register_singleton(
-            dependency_type=MiddlewareTypeFilter,
-            factory=MiddlewareTypeFilter.all,
-        )
         self.container.register_singleton(DelegateToAggregate)
         self.container.register_singleton(
             dependency_type=CommandBus,
@@ -228,12 +224,13 @@ class ApplicationBuilder:
     ) -> "ApplicationBuilder":
         """Register a dependency with the application.
 
-        This method will register a dependency with the application. All
-        dependencies are registered as singletons and the provided factory
-        will be used to create the dependency when it is resolved for the
-        first time. If no factory is provided, the dependency will be resolved
-        by calling the __init__ method of the dependency type. Regardless of
-        dependecies of that function will be resolved by the container.
+        This method will register a dependency with the application.
+        All dependencies are registered as singletons and the provided
+        factory will be used to create the dependency when it is
+        resolved for the first time. If no factory is provided, the
+        dependency will be resolved by calling the __init__ method of
+        the dependency type. Regardless of dependecies of that function
+        will be resolved by the container.
 
         Args:
             dependency_type: The type to register
@@ -242,7 +239,9 @@ class ApplicationBuilder:
         Returns:
             The application builder
         """
-        self.container.register_singleton(dependency_type, factory or dependency_type)
+        self.container.register_singleton(
+            dependency_type, factory or dependency_type
+        )
         return self
 
     def register_aggregate(
@@ -308,23 +307,16 @@ class ApplicationBuilder:
     def register_middleware(
         self,
         middleware_type: type[CommandMiddleware],
-        filter: MiddlewareTypeFilter | None = None,
     ) -> "ApplicationBuilder":
         """Register middleware with the application.
 
         This method will register middleware with the application. The
         middleware will be registered with the application and will be
-        available to be resolved.In addition to registering the middleware,
-        you can also configure the middleware's filter via setting the
-        relevant optional parameter.
-
-        If the middleware was already registered, this method will update the
-        filter for the middleware. Thefore it is fine to have multiple calls
-        to this method for the same middleware type.
+        available to be resolved. Middleware uses annotation-based routing
+        with @intercepts decorator to determine which commands to intercept.
 
         Args:
             middleware_type: The type of middleware to register
-            filter: The filter to use for the middleware
 
         Returns:
             The application builder.
@@ -332,9 +324,6 @@ class ApplicationBuilder:
         container = self.contextual_binding.container_for(middleware_type)
         container.register_singleton(middleware_type)
         container.register_singleton(CommandMiddleware, middleware_type)
-        container.register_singleton(HandleWithMiddleware)
-        if filter:
-            container.register_singleton(MiddlewareTypeFilter, lambda: filter)
         return self
 
     def register_event_processor(
@@ -449,24 +438,41 @@ class ApplicationBuilder:
         return AggregateToRepositoryMap.from_repositories(all_repositories)
 
     def _build_upcaster_map(self) -> UpcasterMap:
-        all_upcasters = self.contextual_binding.all_of_type(EventUpcaster)
+        all_upcasters = self.contextual_binding.all_of_type(
+            EventUpcaster
+        )
         return UpcasterMap.from_upcasters(all_upcasters)
 
     def _build_synchronous_delivery(self) -> SynchronousDelivery:
         transport = self.container.resolve(EventTransport)
-        processors = self.contextual_binding.resolve_all_of_type(EventProcessor)
+        processors = self.contextual_binding.resolve_all_of_type(
+            EventProcessor
+        )
         return SynchronousDelivery(transport, processors)
 
-    def _build_middleware_handlers(self) -> list[HandleWithMiddleware]:
-        all_middleware_types = self.contextual_binding.all_of_type(CommandMiddleware)
+    def _build_middleware(self) -> list[CommandMiddleware]:
+        """Build list of middleware instances for the command bus.
+
+        Returns:
+            List of configured middleware instances in registration
+            order.
+        """
+        all_middleware_types = self.contextual_binding.all_of_type(
+            CommandMiddleware
+        )
         return [
             self.contextual_binding.container_for(middleware_type).resolve(
-                HandleWithMiddleware
+                middleware_type
             )
             for middleware_type in all_middleware_types
         ]
 
     def _build_command_bus(self) -> CommandBus:
+        """Build the command bus with middleware chain.
+
+        Returns:
+            Configured CommandBus instance.
+        """
         root_handler = self.container.resolve(DelegateToAggregate)
-        middleware_handlers = self._build_middleware_handlers()
-        return CommandBus(root_handler, middleware_handlers)
+        middleware = self._build_middleware()
+        return CommandBus(root_handler, middleware)

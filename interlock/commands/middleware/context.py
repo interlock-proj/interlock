@@ -5,56 +5,59 @@ distributed tracing across the entire system. It extracts context from commands
 and sets up the execution context before command execution.
 """
 
-from typing import TypeVar
-
 from ulid import ULID
 
 from ...context import ExecutionContext, clear_context, set_context
+from ...routing import intercepts
 from ..bus import CommandHandler, CommandMiddleware
 from ..command import Command
 
-T = TypeVar("T", bound=Command)
 
-
-class ContextPropagationMiddleware(CommandMiddleware[Command]):
+class ContextPropagationMiddleware(CommandMiddleware):
     """Middleware that propagates execution context from commands.
 
     This middleware extracts correlation_id, causation_id, and command_id from
     incoming commands and sets up the execution context before the command is
     handled. This enables:
 
-    1. **Distributed Tracing**: Track entire operations across services
-    2. **Causation Tracking**: Understand what caused each command/event
-    3. **Automatic Context Flow**: Events emitted by aggregates automatically
-       inherit the context set by this middleware
+    1. **Distributed Tracing**: Track entire operations across
+       services
+    2. **Causation Tracking**: Understand what caused each
+       command/event
+    3. **Automatic Context Flow**: Events emitted by aggregates
+       automatically inherit the context set by this middleware
 
     **Context Setup**:
     - If command has correlation_id: use it
-    - If command has no correlation_id: generate a new one (entry point)
+    - If command has no correlation_id: generate a new one
+      (entry point)
     - If command has causation_id: use it
-    - If command has no causation_id: use correlation_id (self-referencing entry point)
+    - If command has no causation_id: use correlation_id
+      (self-referencing entry point)
     - Always use command.command_id for tracking
 
     **Context Cleanup**:
-    The middleware ensures the context is cleared after command execution (even if
-    the command fails) to prevent context leakage between operations.
+    The middleware ensures the context is cleared after command
+    execution (even if the command fails) to prevent context leakage
+    between operations.
 
     **Middleware Order**:
-    This middleware should typically run early in the middleware chain, before
-    logging or other cross-cutting concerns that might need access to context.
+    This middleware should typically run early in the middleware
+    chain, before logging or other cross-cutting concerns that might
+    need access to context.
 
     Examples:
         Add to all commands:
 
         >>> app = (ApplicationBuilder()
-        ...     .add_middleware(Command, ContextPropagationMiddleware())
+        ...     .register_middleware(ContextPropagationMiddleware)
         ...     .build())
 
         Add with other middleware:
 
         >>> app = (ApplicationBuilder()
-        ...     .add_middleware(Command, ContextPropagationMiddleware())
-        ...     .add_middleware(Command, LoggingMiddleware("INFO"))
+        ...     .register_middleware(ContextPropagationMiddleware)
+        ...     .register_middleware(LoggingMiddleware)
         ...     .build())
 
     Note:
@@ -62,15 +65,19 @@ class ContextPropagationMiddleware(CommandMiddleware[Command]):
         ApplicationBuilder.use_correlation_tracking().
     """
 
-    async def handle(self, command: T, next: CommandHandler) -> None:
+    @intercepts
+    async def propagate_context(
+        self, command: Command, next: CommandHandler
+    ) -> None:
         """Set up execution context and pass command to next handler.
 
-        The context is cleared after command execution (even on failure) to prevent
-        context leakage.
+        The context is cleared after command execution (even on
+        failure) to prevent context leakage.
 
         Args:
-            command: The command to process. Context is extracted from its
-                correlation_id, causation_id, and command_id fields.
+            command: The command to process. Context is extracted from
+                its correlation_id, causation_id, and command_id
+                fields.
             next: The next handler in the middleware chain.
         """
         # Extract context from command, generate defaults for missing values
@@ -94,7 +101,7 @@ class ContextPropagationMiddleware(CommandMiddleware[Command]):
 
         try:
             # Pass to next handler with context set
-            await next.handle(command)
+            await next(command)
         finally:
             # Always clear context after command execution to prevent leakage
             clear_context()
