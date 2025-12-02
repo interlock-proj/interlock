@@ -20,12 +20,6 @@ dev = [
     "ruff>=0.8.0",
     "mypy>=1.13.0",
 ]
-neo4j = [
-    "neo4j>=5.0.0,<6.0.0",
-]
-mongodb = [
-    "pymongo>=4.10.0",
-]
 
 [build-system]
 requires = ["hatchling"]
