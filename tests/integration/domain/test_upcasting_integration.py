@@ -85,11 +85,9 @@ async def test_upcasting_with_application_builder():
     # Build application with upcasters
     app = (
         ApplicationBuilder()
-        .add_aggregate(User)
-        .add_command(RegisterUser)
-        .add_upcaster(UserRegisteredV1ToV2)
-        .add_upcaster(UserRegisteredV2ToV3)
-        .use_synchronous_processing()
+        .register_aggregate(User)
+        .register_upcaster(UserRegisteredV1ToV2)
+        .register_upcaster(UserRegisteredV2ToV3)
         .build()
     )
 
@@ -142,12 +140,12 @@ async def test_upcaster_order_independence():
     # Register upcaster BEFORE its dependency - should work!
     app = (
         ApplicationBuilder()
-        .add_aggregate(User)
-        .add_command(RegisterUser)
-        .add_upcaster(ConfigDrivenUpcaster)  # Registered FIRST
-        .add_dependency(UpcasterConfig)  # Registered AFTER
-        .add_upcaster(UserRegisteredV2ToV3)  # Another upcaster
-        .use_synchronous_processing()
+        .register_aggregate(User)
+
+        .register_upcaster(ConfigDrivenUpcaster)  # Registered FIRST
+        .register_dependency(UpcasterConfig)  # Registered AFTER
+        .register_upcaster(UserRegisteredV2ToV3)  # Another upcaster
+        
         .build()
     )
 
@@ -170,11 +168,11 @@ async def test_upcasting_preserves_event_metadata():
     """Test that event metadata is preserved through upcasting chain."""
     app = (
         ApplicationBuilder()
-        .add_aggregate(User)
-        .add_command(RegisterUser)
-        .add_upcaster(UserRegisteredV1ToV2)
-        .add_upcaster(UserRegisteredV2ToV3)
-        .use_synchronous_processing()
+        .register_aggregate(User)
+
+        .register_upcaster(UserRegisteredV1ToV2)
+        .register_upcaster(UserRegisteredV2ToV3)
+        
         .build()
     )
 
@@ -234,14 +232,11 @@ async def test_multiple_aggregates_with_different_upcasters():
     # Build app with both sets of upcasters
     app = (
         ApplicationBuilder()
-        .add_aggregate(User)
-        .add_aggregate(Account)
-        .add_command(RegisterUser)
-        .add_command(CreateAccount)
-        .add_upcaster(UserRegisteredV1ToV2)
-        .add_upcaster(UserRegisteredV2ToV3)
-        .add_upcaster(AccountCreatedV1ToV2)
-        .use_synchronous_processing()
+        .register_aggregate(User)
+        .register_aggregate(Account)
+        .register_upcaster(UserRegisteredV1ToV2)
+        .register_upcaster(UserRegisteredV2ToV3)
+        .register_upcaster(AccountCreatedV1ToV2)
         .build()
     )
 

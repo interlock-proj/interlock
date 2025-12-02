@@ -175,5 +175,5 @@ async def test_load_class(snapshot_backend_single):
     """Test dynamic class loading."""
     from interlock.domain import Aggregate
 
-    cls = snapshot_backend_single._load_class("interlock.aggregates.aggregate", "Aggregate")
+    cls = snapshot_backend_single._load_class("interlock.domain", "Aggregate")
     assert cls == Aggregate

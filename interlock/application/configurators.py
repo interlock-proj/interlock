@@ -58,7 +58,7 @@ class AggregatesInPackage(ApplicationProfile):
         """
         for module in self.scanner.find_modules("aggregate"):
             for aggregate_cls in ClassScanner.find_subclasses(module, Aggregate):
-                builder.add_aggregate(aggregate_cls)
+                builder.register_aggregate(aggregate_cls)
 
 
 class CommandsInPackage(ApplicationProfile):
@@ -87,9 +87,10 @@ class CommandsInPackage(ApplicationProfile):
         Args:
             builder: ApplicationBuilder to configure
         """
-        for module in self.scanner.find_modules("command"):
-            for command_cls in ClassScanner.find_subclasses(module, Command):
-                builder.add_command(command_cls)
+        # Commands don't need explicit registration - they're dispatched directly
+        # for module in self.scanner.find_modules("command"):
+        #     for command_cls in ClassScanner.find_subclasses(module, Command):
+        #         pass  # Commands are discovered but don't need registration
 
 
 class MiddlewareInPackage(ApplicationProfile):
@@ -125,7 +126,7 @@ class MiddlewareInPackage(ApplicationProfile):
             for middleware_cls in ClassScanner.find_subclasses(module, CommandMiddleware):  # type: ignore[type-abstract]
                 # Register middleware type - builder will resolve with DI
                 # Apply to all commands by default
-                builder.add_middleware(Command, middleware_cls)
+                builder.register_middleware(Command, middleware_cls)
 
 
 class EventProcessorsInPackage(ApplicationProfile):
@@ -161,7 +162,7 @@ class EventProcessorsInPackage(ApplicationProfile):
         for name in ["processor", "projection"]:
             for module in self.scanner.find_modules(name):
                 for processor_cls in ClassScanner.find_subclasses(module, EventProcessor):
-                    builder.add_event_processor(processor_cls)
+                    builder.register_event_processor(processor_cls)
 
 
 class ConfigsInPackage(ApplicationProfile):
@@ -200,7 +201,7 @@ class ConfigsInPackage(ApplicationProfile):
 
         for module in self.scanner.find_modules("config"):
             for config_cls in ClassScanner.find_subclasses(module, BaseSettings):
-                builder.add_dependency(config_cls)
+                builder.register_dependency(config_cls)
 
 
 class ServicesInPackage(ApplicationProfile):
@@ -250,7 +251,7 @@ class ServicesInPackage(ApplicationProfile):
 
                 # Register by interface or concrete type
                 registration_type = ClassScanner.get_registration_type(service_cls)
-                builder.add_dependency(registration_type, service_cls)
+                builder.register_dependency(registration_type, service_cls)
 
     @staticmethod
     def _is_framework_type(cls: type) -> bool:
@@ -307,7 +308,7 @@ class UpcastersInPackage(ApplicationProfile):
         for module in self.scanner.find_modules("upcaster"):
             for upcaster_cls in ClassScanner.find_subclasses(module, EventUpcaster):  # type: ignore[type-abstract]
                 # Register upcaster type - builder will handle instantiation
-                builder.add_upcaster(upcaster_cls)
+                builder.register_upcaster(upcaster_cls)
 
 
 class ApplicationProfileSet(ApplicationProfile):

@@ -6,6 +6,7 @@ import pytest
 from ulid import ULID
 
 from interlock.application import ApplicationBuilder
+from interlock.application.commands.middleware.context import ContextPropagationMiddleware
 from interlock.context import get_context
 from interlock.application.events.processing import EventProcessor
 from interlock.routing import handles_event
@@ -30,12 +31,13 @@ async def test_correlation_id_propagates_to_events():
             pass
 
     app = (
-        ApplicationBuilder()
-        .use_correlation_tracking()
-        .add_aggregate(BankAccount)
-        .add_command(OpenAccount)
-        .add_event_processor(EventCapturingProcessor)
-        .use_synchronous_processing()
+        ApplicationBuilder()\
+            .register_middleware(ContextPropagationMiddleware)\
+        .register_middleware(ContextPropagationMiddleware)
+        
+        .register_aggregate(BankAccount)
+        .register_event_processor(EventCapturingProcessor)
+        
         .build()
     )
 
@@ -78,12 +80,13 @@ async def test_correlation_id_auto_generated_when_missing():
             pass
 
     app = (
-        ApplicationBuilder()
-        .use_correlation_tracking()
-        .add_aggregate(BankAccount)
-        .add_command(OpenAccount)
-        .add_event_processor(EventCapturingProcessor)
-        .use_synchronous_processing()
+        ApplicationBuilder()\
+            .register_middleware(ContextPropagationMiddleware)\
+        .register_middleware(ContextPropagationMiddleware)
+        
+        .register_aggregate(BankAccount)
+        .register_event_processor(EventCapturingProcessor)
+        
         .build()
     )
 
@@ -122,12 +125,13 @@ async def test_context_available_in_event_processor():
             captured_contexts.append(get_context())
 
     app = (
-        ApplicationBuilder()
-        .use_correlation_tracking()
-        .add_aggregate(BankAccount)
-        .add_command(OpenAccount)
-        .add_event_processor(ContextCapturingProcessor)
-        .use_synchronous_processing()
+        ApplicationBuilder()\
+            .register_middleware(ContextPropagationMiddleware)\
+        .register_middleware(ContextPropagationMiddleware)
+        
+        .register_aggregate(BankAccount)
+        .register_event_processor(ContextCapturingProcessor)
+        
         .build()
     )
 
@@ -152,11 +156,12 @@ async def test_context_available_in_event_processor():
 async def test_context_cleared_after_command():
     """Context should be cleared after command completes."""
     app = (
-        ApplicationBuilder()
-        .use_correlation_tracking()
-        .add_aggregate(BankAccount)
-        .add_command(OpenAccount)
-        .use_synchronous_processing()
+        ApplicationBuilder()\
+            .register_middleware(ContextPropagationMiddleware)\
+        .register_middleware(ContextPropagationMiddleware)
+        
+        .register_aggregate(BankAccount)
+        
         .build()
     )
 
@@ -187,13 +192,13 @@ async def test_multiple_commands_same_correlation():
             pass
 
     app = (
-        ApplicationBuilder()
-        .use_correlation_tracking()
-        .add_aggregate(BankAccount)
-        .add_command(OpenAccount)
-        .add_command(DepositMoney)
-        .add_event_processor(EventCapturingProcessor)
-        .use_synchronous_processing()
+        ApplicationBuilder()\
+            .register_middleware(ContextPropagationMiddleware)\
+        .register_middleware(ContextPropagationMiddleware)
+        
+        .register_aggregate(BankAccount)
+        .register_event_processor(EventCapturingProcessor)
+        
         .build()
     )
 
@@ -246,11 +251,9 @@ async def test_without_correlation_tracking_middleware():
 
     app = (
         ApplicationBuilder()
-        # NOT using .use_correlation_tracking()
-        .add_aggregate(BankAccount)
-        .add_command(OpenAccount)
-        .add_event_processor(EventCapturingProcessor)
-        .use_synchronous_processing()
+        # NOT using ContextPropagationMiddleware
+        .register_aggregate(BankAccount)
+        .register_event_processor(EventCapturingProcessor)
         .build()
     )
 
@@ -286,12 +289,13 @@ async def test_event_causation_is_command_id():
             pass
 
     app = (
-        ApplicationBuilder()
-        .use_correlation_tracking()
-        .add_aggregate(BankAccount)
-        .add_command(OpenAccount)
-        .add_event_processor(EventCapturingProcessor)
-        .use_synchronous_processing()
+        ApplicationBuilder()\
+            .register_middleware(ContextPropagationMiddleware)\
+        .register_middleware(ContextPropagationMiddleware)
+        
+        .register_aggregate(BankAccount)
+        .register_event_processor(EventCapturingProcessor)
+        
         .build()
     )
 
@@ -335,12 +339,13 @@ async def test_full_causation_chain():
             captured_context_in_processor = get_context()
 
     app = (
-        ApplicationBuilder()
-        .use_correlation_tracking()
-        .add_aggregate(BankAccount)
-        .add_command(OpenAccount)
-        .add_event_processor(ContextCapturingProcessor)
-        .use_synchronous_processing()
+        ApplicationBuilder()\
+            .register_middleware(ContextPropagationMiddleware)\
+        .register_middleware(ContextPropagationMiddleware)
+        
+        .register_aggregate(BankAccount)
+        .register_event_processor(ContextCapturingProcessor)
+        
         .build()
     )
 

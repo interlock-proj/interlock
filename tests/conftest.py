@@ -249,7 +249,7 @@ def upcaster_map():
 @pytest.fixture
 def command_handler(counter_app):
     """Resolve DelegateToAggregate from counter app."""
-    from interlock.commands.bus import DelegateToAggregate
+    from interlock.application.commands import DelegateToAggregate
 
     return counter_app.resolve(DelegateToAggregate)
 

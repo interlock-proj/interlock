@@ -8,6 +8,11 @@ if TYPE_CHECKING:
 
 
 class AggregateCacheBackend(ABC):
+    """Mechanism for caching aggregates.
+    
+    A cache backend is resposible for store and retrieve aggregates from a cache and 
+    can 
+    """
     @staticmethod
     def null() -> "AggregateCacheBackend":
         return NullAggregateCacheBackend()

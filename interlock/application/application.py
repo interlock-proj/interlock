@@ -47,6 +47,7 @@ class Application:
     def __init__(self, contextual_binding: ContextualBinding):
         self.contextual_binding = contextual_binding
         self.command_bus = self.resolve(CommandBus)
+        self.event_bus = self.resolve(EventBus)
 
     async def dispatch(self, command: Command) -> None:
         """Dispatch a command to the application.
@@ -78,6 +79,17 @@ class Application:
                 resolved.
         """
         return self.contextual_binding.resolve(type_to_resolve)
+
+    def get_dependency(self, dependency_type: type[T]) -> T:
+        """Alias for resolve() - get a dependency from the application context.
+
+        Args:
+            dependency_type: The type to resolve
+
+        Returns:
+            The resolved dependency
+        """
+        return self.resolve(dependency_type)
 
     async def run_event_processors(
         self, *processors: type[EventProcessor]
@@ -437,9 +449,13 @@ class ApplicationBuilder:
         return AggregateToRepositoryMap.from_repositories(all_repositories)
 
     def _build_upcaster_map(self) -> UpcasterMap:
-        all_upcasters = self.contextual_binding.all_of_type(
-            EventUpcaster
-        )
+        # Get all upcaster types
+        upcaster_types = self.contextual_binding.all_of_type(EventUpcaster)
+        # Resolve them to get instances
+        all_upcasters = [
+            self.contextual_binding.resolve(upcaster_type)
+            for upcaster_type in upcaster_types
+        ]
         return UpcasterMap.from_upcasters(all_upcasters)
 
     def _build_synchronous_delivery(self) -> SynchronousDelivery:

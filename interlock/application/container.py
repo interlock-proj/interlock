@@ -9,7 +9,10 @@ T = TypeVar("T")
 class DependencyNotFoundError(Exception):
     @classmethod
     def from_type(cls, dependency_type: type[T]) -> "DependencyNotFoundError":
-        return cls(f"Dependency {dependency_type.__name__} not found")
+        if hasattr(dependency_type, '__name__'):
+            return cls(f"Dependency {dependency_type.__name__} not found")
+        else:
+            return cls(f"Dependency {dependency_type} not found")
 
 
 class DependencyCircularReferenceError(Exception):
@@ -43,6 +46,7 @@ class FactoryDependency(Dependency[T]):
             k: container.resolve(v.annotation)
             for k, v in sig.parameters.items()
             if v.annotation is not inspect.Parameter.empty
+            and v.default is inspect.Parameter.empty  # Skip parameters with defaults
         }
 
 
