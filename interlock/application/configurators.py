@@ -125,8 +125,7 @@ class MiddlewareInPackage(ApplicationProfile):
         for module in self.scanner.find_modules("middleware"):
             for middleware_cls in ClassScanner.find_subclasses(module, CommandMiddleware):  # type: ignore[type-abstract]
                 # Register middleware type - builder will resolve with DI
-                # Apply to all commands by default
-                builder.register_middleware(Command, middleware_cls)
+                builder.register_middleware(middleware_cls)
 
 
 class EventProcessorsInPackage(ApplicationProfile):

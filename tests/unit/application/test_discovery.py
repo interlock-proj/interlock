@@ -82,13 +82,14 @@ def test_find_subclasses_discovers_aggregates():
 
 def test_find_subclasses_discovers_commands():
     """Test finding Command subclasses."""
-    import tests.fixtures.test_app.commands.bank_commands as module
+    import tests.fixtures.test_app.aggregates.bank_account as module
 
     classes = list(ClassScanner.find_subclasses(module, Command))
 
     class_names = [cls.__name__ for cls in classes]
     assert "DepositMoney" in class_names
     assert "WithdrawMoney" in class_names
+    assert "OpenAccount" in class_names
 
 
 def test_find_subclasses_filters_base_class():

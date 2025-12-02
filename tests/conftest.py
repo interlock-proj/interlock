@@ -1,163 +1,29 @@
-"""Central test fixtures for all tests.
-
-This module provides a base test application with common components that can be
-reused and extended by specific tests. Tests can modify the application builder
-to add test-specific components while reusing the common infrastructure.
-"""
+"""Central test fixtures - imports from unified test_app."""
 
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from decimal import Decimal
 
 import pytest
-from pydantic import BaseModel
 from ulid import ULID
 
 from interlock.application import ApplicationBuilder
-from interlock.application.commands import CommandHandler, CommandMiddleware
 from interlock.application.events import InMemoryEventStore, InMemoryEventTransport
 from interlock.application.events.processing import InMemorySagaStateStore
 from interlock.application.events.store import EventStore
-from interlock.domain import Aggregate, Command
-from interlock.routing import applies_event, handles_command, intercepts
 
-
-class IncrementCounter(Command):
-    """Increment a counter by a specified amount."""
-
-    amount: int = 1
-
-
-class SetName(Command):
-    """Set a name on an aggregate."""
-
-    name: str
-
-
-class DepositMoney(Command):
-    """Deposit money into a bank account."""
-
-    amount: Decimal
-
-
-class WithdrawMoney(Command):
-    """Withdraw money from a bank account."""
-
-    amount: Decimal
-
-
-class OpenAccount(Command):
-    """Open a bank account."""
-
-    owner: str
-
-
-class CounterIncremented(BaseModel):
-    """Counter was incremented."""
-
-    amount: int
-
-
-class NameChanged(BaseModel):
-    """Name was changed."""
-
-    name: str
-
-
-class MoneyDeposited(BaseModel):
-    """Money was deposited."""
-
-    amount: Decimal
-
-
-class MoneyWithdrawn(BaseModel):
-    """Money was withdrawn."""
-
-    amount: Decimal
-
-
-class AccountOpened(BaseModel):
-    """Account was opened."""
-
-    owner: str
-
-
-class Counter(Aggregate):
-    """Simple counter aggregate for testing."""
-
-    count: int = 0
-    name: str = ""
-
-    @handles_command
-    def handle_increment(self, command: IncrementCounter):
-        self.emit(CounterIncremented(amount=command.amount))
-
-    @handles_command
-    def handle_set_name(self, command: SetName):
-        self.emit(NameChanged(name=command.name))
-
-    @applies_event
-    def apply_incremented(self, event: CounterIncremented):
-        self.count += event.amount
-
-    @applies_event
-    def apply_name_changed(self, event: NameChanged):
-        self.name = event.name
-
-
-class BankAccount(Aggregate):
-    """Bank account aggregate for testing."""
-
-    balance: Decimal = Decimal("0.00")
-    owner: str = ""
-
-    @handles_command
-    def handle_open(self, cmd: OpenAccount) -> None:
-        if self.owner:
-            raise ValueError("Account already opened")
-        self.emit(AccountOpened(owner=cmd.owner))
-
-    @handles_command
-    def handle_deposit(self, cmd: DepositMoney) -> None:
-        if cmd.amount <= 0:
-            raise ValueError("Amount must be positive")
-        self.emit(MoneyDeposited(amount=cmd.amount))
-
-    @handles_command
-    def handle_withdraw(self, cmd: WithdrawMoney) -> None:
-        if cmd.amount <= 0:
-            raise ValueError("Amount must be positive")
-        if cmd.amount > self.balance:
-            raise ValueError("Insufficient funds")
-        self.emit(MoneyWithdrawn(amount=cmd.amount))
-
-    @applies_event
-    def apply_opened(self, evt: AccountOpened) -> None:
-        self.owner = evt.owner
-
-    @applies_event
-    def apply_deposited(self, event: MoneyDeposited) -> None:
-        self.balance += event.amount
-
-    @applies_event
-    def apply_withdrawn(self, event: MoneyWithdrawn) -> None:
-        self.balance -= event.amount
-
-
-class ExecutionTracker(CommandMiddleware):
-    """Middleware that tracks command execution for testing."""
-
-    def __init__(self):
-        self.executions = []
-
-    @intercepts
-    async def track_execution(
-        self, command: Command, next: CommandHandler
-    ):
-        self.executions.append(("start", type(command).__name__))
-        result = await next(command)
-        self.executions.append(("end", type(command).__name__))
-        return result
+# Import all test domain objects from unified test app
+from tests.fixtures.test_app import (
+    BankAccount,
+    DepositMoney,
+    ExecutionTracker,
+    OpenAccount,
+    WithdrawMoney,
+)
+from tests.fixtures.test_app.aggregates.bank_account import (
+    AccountOpened,
+    MoneyDeposited,
+    MoneyWithdrawn,
+)
 
 
 @pytest.fixture
@@ -168,7 +34,7 @@ def aggregate_id() -> ULID:
 
 @pytest.fixture
 def account_id() -> ULID:
-    """Generate a unique account ID (alias for aggregate_id)."""
+    """Generate a unique account ID."""
     return ULID()
 
 
@@ -179,27 +45,9 @@ def correlation_id() -> ULID:
 
 
 @pytest.fixture
-def counter(aggregate_id: ULID) -> Counter:
-    """Create a Counter aggregate instance."""
-    return Counter(id=aggregate_id)
-
-
-@pytest.fixture
 def bank_account(aggregate_id: ULID) -> BankAccount:
     """Create a BankAccount aggregate instance."""
     return BankAccount(id=aggregate_id)
-
-
-@pytest.fixture
-def counter_repository(counter: Counter):
-    """Create a simple repository for Counter aggregates."""
-
-    class CounterRepository:
-        @asynccontextmanager
-        async def acquire(self, aggregate_id: ULID) -> AsyncIterator[Counter]:
-            yield counter
-
-    return CounterRepository()
 
 
 @pytest.fixture
@@ -247,30 +95,10 @@ def upcaster_map():
 
 
 @pytest.fixture
-def command_handler(counter_app):
-    """Resolve DelegateToAggregate from counter app."""
-    from interlock.application.commands import DelegateToAggregate
-
-    return counter_app.resolve(DelegateToAggregate)
-
-
-@pytest.fixture
 def base_app_builder(
     event_store: InMemoryEventStore, event_transport: InMemoryEventTransport
 ) -> ApplicationBuilder:
-    """Create a base application builder with common dependencies.
-
-    Tests can use this fixture and add their specific components:
-
-    def test_something(base_app_builder, aggregate_id):
-        app = (
-            base_app_builder
-            .add_aggregate(Counter)
-            .add_command(IncrementCounter)
-            .build()
-        )
-        await app.dispatch(IncrementCounter(aggregate_id=aggregate_id))
-    """
+    """Create a base application builder with common dependencies."""
     return (
         ApplicationBuilder()
         .register_dependency(EventStore, lambda: event_store)
@@ -279,27 +107,23 @@ def base_app_builder(
 
 
 @pytest.fixture
-def counter_app(base_app_builder: ApplicationBuilder):
-    """Create a pre-configured application with Counter aggregate.
-
-    This is a convenience fixture for tests that need a simple counter app.
-    """
-    return (
-        base_app_builder.register_aggregate(Counter)
-        .build()
-    )
+def bank_account_app(base_app_builder: ApplicationBuilder):
+    """Create application with BankAccount aggregate."""
+    return base_app_builder.register_aggregate(BankAccount).build()
 
 
 @pytest.fixture
-def bank_account_app(base_app_builder: ApplicationBuilder):
-    """Create a pre-configured application with BankAccount aggregate.
+def test_app(base_app_builder: ApplicationBuilder):
+    """Create fully-configured test application via convention-based discovery."""
+    return base_app_builder.convention_based("tests.fixtures.test_app").build()
 
-    This is a convenience fixture for tests that need a bank account app.
-    """
-    return (
-        base_app_builder.register_aggregate(BankAccount)
-        .build()
-    )
+
+@pytest.fixture
+def command_handler(bank_account_app):
+    """Resolve DelegateToAggregate from bank account app."""
+    from interlock.application.commands import DelegateToAggregate
+
+    return bank_account_app.resolve(DelegateToAggregate)
 
 
 @pytest.fixture(autouse=True)

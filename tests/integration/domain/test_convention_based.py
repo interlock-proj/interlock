@@ -124,7 +124,7 @@ async def test_manual_override_after_convention_based():
     app = (
         ApplicationBuilder()
         .convention_based("tests.fixtures.test_app")
-        .register_dependency(EventStore, custom_store)  # Override
+        .register_dependency(EventStore, lambda: custom_store)  # Override
         
         .build()
     )

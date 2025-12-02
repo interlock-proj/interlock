@@ -41,7 +41,6 @@ class FactoryDependency(Dependency[T]):
     def get_dependencies(self, container: "DependencyContainer") -> dict[type, Any]:
         # inspect the signature of factory to get the argument names -> values
         sig = inspect.signature(self.factory)
-        print(sig.parameters)
         return {
             k: container.resolve(v.annotation)
             for k, v in sig.parameters.items()
@@ -54,16 +53,16 @@ class SingletonDependency(Dependency[T]):
     def __init__(self, factory: FactoryDependency[T]):
         self.factory = factory
         self.instance: T | None = None
-        self._resovling: bool = False
+        self._resolving: bool = False
 
     def resolve(self, container: "DependencyContainer") -> T:
-        if self._resovling:
+        if self._resolving:
             raise DependencyCircularReferenceError.from_container(container)
 
         if self.instance is None:
-            self._resovling = True
+            self._resolving = True
             self.instance = self.factory.resolve(container)
-            self._resovling = False
+            self._resolving = False
         return self.instance
 
 
@@ -79,7 +78,7 @@ class DependencyContainer:
         return [
             k
             for k in self.dependencies
-            if getattr(self.dependencies[k], "_resovling", False)
+            if getattr(self.dependencies[k], "_resolving", False)
         ] + (self.parent.all_resolving() if self.parent else [])
 
     def resolve(self, dependency_type: type[T]) -> T:

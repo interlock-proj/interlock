@@ -6,10 +6,10 @@ from ulid import ULID
 from interlock.application.commands import CommandBus, DelegateToAggregate
 from interlock.application.commands.middleware import LoggingMiddleware
 from tests.conftest import (
-    Counter,
+    BankAccount,
     ExecutionTracker,
-    IncrementCounter,
-    SetName,
+    DepositMoney,
+    OpenAccount,
 )
 
 
@@ -17,7 +17,7 @@ from tests.conftest import (
 async def test_delegate_to_aggregate_executes_command(
     aggregate_id: ULID, command_handler, event_store
 ):
-    command = IncrementCounter(aggregate_id=aggregate_id, amount=5)
+    command = DepositMoney(aggregate_id=aggregate_id, amount=5)
 
     await command_handler.handle(command)
 
@@ -31,8 +31,8 @@ async def test_delegate_to_aggregate_executes_command(
 async def test_delegate_to_aggregate_handles_multiple_commands(
     aggregate_id: ULID, command_handler, event_store
 ):
-    await command_handler.handle(IncrementCounter(aggregate_id=aggregate_id, amount=3))
-    await command_handler.handle(IncrementCounter(aggregate_id=aggregate_id, amount=7))
+    await command_handler.handle(DepositMoney(aggregate_id=aggregate_id, amount=3))
+    await command_handler.handle(DepositMoney(aggregate_id=aggregate_id, amount=7))
 
     # Verify events were saved
     events = await event_store.load_events(aggregate_id, 1)
@@ -47,13 +47,13 @@ async def test_middleware_wraps_handler_execution(
     command_handler,
     execution_tracker: ExecutionTracker,
 ):
-    command = IncrementCounter(aggregate_id=aggregate_id, amount=1)
+    command = DepositMoney(aggregate_id=aggregate_id, amount=1)
 
     await execution_tracker.intercept(command, command_handler.handle)
 
     assert execution_tracker.executions == [
-        ("start", "IncrementCounter"),
-        ("end", "IncrementCounter"),
+        ("start", "DepositMoney"),
+        ("end", "DepositMoney"),
     ]
 
 
@@ -64,17 +64,17 @@ async def test_multiple_middlewares_execute_in_order(
     tracker1 = ExecutionTracker()
     tracker2 = ExecutionTracker()
 
-    command = IncrementCounter(aggregate_id=aggregate_id, amount=1)
+    command = DepositMoney(aggregate_id=aggregate_id, amount=1)
     # Chain: tracker2 -> tracker1 -> command_handler
     await tracker2.intercept(
         command,
         lambda cmd: tracker1.intercept(cmd, command_handler.handle),
     )
 
-    assert tracker2.executions[0] == ("start", "IncrementCounter")
-    assert tracker1.executions[0] == ("start", "IncrementCounter")
-    assert tracker1.executions[1] == ("end", "IncrementCounter")
-    assert tracker2.executions[1] == ("end", "IncrementCounter")
+    assert tracker2.executions[0] == ("start", "DepositMoney")
+    assert tracker1.executions[0] == ("start", "DepositMoney")
+    assert tracker1.executions[1] == ("end", "DepositMoney")
+    assert tracker2.executions[1] == ("end", "DepositMoney")
 
 
 def test_logging_middleware_accepts_log_levels():
@@ -90,7 +90,7 @@ async def test_logging_middleware_logs_commands(
     aggregate_id: ULID, caplog, command_handler
 ):
     middleware = LoggingMiddleware("INFO")
-    command = IncrementCounter(aggregate_id=aggregate_id, amount=5)
+    command = DepositMoney(aggregate_id=aggregate_id, amount=5)
 
     with caplog.at_level(logging.INFO):
         await middleware.intercept(command, command_handler.handle)
@@ -100,9 +100,9 @@ async def test_logging_middleware_logs_commands(
 
 @pytest.mark.asyncio
 async def test_command_bus_routes_command_to_aggregate(
-    aggregate_id: ULID, counter_app, event_store
+    aggregate_id: ULID, bank_account_app, event_store
 ):
-    await counter_app.dispatch(IncrementCounter(aggregate_id=aggregate_id, amount=10))
+    await bank_account_app.dispatch(DepositMoney(aggregate_id=aggregate_id, amount=10))
 
     # Verify by checking events were saved
     events = await event_store.load_events(aggregate_id, 1)
@@ -112,33 +112,34 @@ async def test_command_bus_routes_command_to_aggregate(
 
 @pytest.mark.asyncio
 async def test_command_bus_routes_different_commands(
-    aggregate_id: ULID, counter_app, event_store
+    aggregate_id: ULID, bank_account_app, event_store
 ):
-    await counter_app.dispatch(IncrementCounter(aggregate_id=aggregate_id, amount=5))
-    await counter_app.dispatch(SetName(aggregate_id=aggregate_id, name="test"))
+    from decimal import Decimal
+    await bank_account_app.dispatch(OpenAccount(aggregate_id=aggregate_id, owner="Alice"))
+    await bank_account_app.dispatch(DepositMoney(aggregate_id=aggregate_id, amount=Decimal("5")))
 
     # Verify by checking events were saved
     events = await event_store.load_events(aggregate_id, 1)
     assert len(events) == 2
-    assert events[0].data.amount == 5
-    assert events[1].data.name == "test"
+    assert events[0].data.owner == "Alice"
+    assert events[1].data.amount == Decimal("5")
 
 
 @pytest.mark.asyncio
 async def test_command_bus_raises_on_unregistered_command(aggregate_id: ULID, base_app_builder):
-    # Build an app without registering Counter aggregate
-    # This should fail when trying to dispatch IncrementCounter
+    # Build an app without registering BankAccount aggregate
+    # This should fail when trying to dispatch DepositMoney
     from interlock.application.container import DependencyNotFoundError
 
     app = base_app_builder.build()
 
     with pytest.raises((KeyError, DependencyNotFoundError)):
-        await app.dispatch(IncrementCounter(aggregate_id=aggregate_id, amount=1))
+        await app.dispatch(DepositMoney(aggregate_id=aggregate_id, amount=1))
 
 
 @pytest.mark.asyncio
-async def test_create_builds_working_bus(aggregate_id: ULID, counter_app, event_store):
-    await counter_app.dispatch(IncrementCounter(aggregate_id=aggregate_id, amount=15))
+async def test_create_builds_working_bus(aggregate_id: ULID, bank_account_app, event_store):
+    await bank_account_app.dispatch(DepositMoney(aggregate_id=aggregate_id, amount=15))
 
     # Verify by checking events were saved
     events = await event_store.load_events(aggregate_id, 1)
@@ -154,12 +155,12 @@ async def test_create_applies_middleware_to_matching_commands(
 ):
     # Middleware now uses @intercepts with specific command types
     app = (
-        base_app_builder.register_aggregate(Counter)
+        base_app_builder.register_aggregate(BankAccount)
         .register_middleware(ExecutionTracker)
         .build()
     )
 
-    await app.dispatch(IncrementCounter(aggregate_id=aggregate_id, amount=5))
+    await app.dispatch(DepositMoney(aggregate_id=aggregate_id, amount=5))
 
     # Verify command executed (middleware doesn't interfere)
     events = await event_store.load_events(aggregate_id, 1)
@@ -174,20 +175,21 @@ async def test_create_applies_middleware_to_all_subclasses(
     event_store,
 ):
     # Middleware intercepts base Command type, applies to all
+    from decimal import Decimal
     app = (
-        base_app_builder.register_aggregate(Counter)
+        base_app_builder.register_aggregate(BankAccount)
         .register_middleware(ExecutionTracker)
         .build()
     )
 
-    await app.dispatch(IncrementCounter(aggregate_id=aggregate_id, amount=3))
-    await app.dispatch(SetName(aggregate_id=aggregate_id, name="tracked"))
+    await app.dispatch(OpenAccount(aggregate_id=aggregate_id, owner="Bob"))
+    await app.dispatch(DepositMoney(aggregate_id=aggregate_id, amount=Decimal("3")))
 
     # Verify both commands executed
     events = await event_store.load_events(aggregate_id, 1)
     assert len(events) == 2
-    assert events[0].data.amount == 3
-    assert events[1].data.name == "tracked"
+    assert events[0].data.owner == "Bob"
+    assert events[1].data.amount == Decimal("3")
 
 
 @pytest.mark.asyncio
@@ -197,32 +199,32 @@ async def test_create_does_not_apply_non_matching_middleware(
     from interlock.routing import intercepts
 
     # Create middleware that only intercept specific command types
-    class IncrementTracker(ExecutionTracker):
+    class DepositTracker(ExecutionTracker):
         @intercepts
-        async def track_increment(
-            self, command: IncrementCounter, next
+        async def track_deposit(
+            self, command: DepositMoney, next
         ):
             self.executions.append(("start", type(command).__name__))
             result = await next(command)
             self.executions.append(("end", type(command).__name__))
             return result
 
-    class SetNameTracker(ExecutionTracker):
+    class OpenTracker(ExecutionTracker):
         @intercepts
-        async def track_setname(self, command: SetName, next):
+        async def track_open(self, command: OpenAccount, next):
             self.executions.append(("start", type(command).__name__))
             result = await next(command)
             self.executions.append(("end", type(command).__name__))
             return result
 
     app = (
-        base_app_builder.register_aggregate(Counter)
-        .register_middleware(IncrementTracker)
-        .register_middleware(SetNameTracker)
+        base_app_builder.register_aggregate(BankAccount)
+        .register_middleware(DepositTracker)
+        .register_middleware(OpenTracker)
         .build()
     )
 
-    await app.dispatch(IncrementCounter(aggregate_id=aggregate_id, amount=7))
+    await app.dispatch(DepositMoney(aggregate_id=aggregate_id, amount=7))
 
     # Verify command executed (middleware doesn't interfere)
     events = await event_store.load_events(aggregate_id, 1)

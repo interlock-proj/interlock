@@ -285,7 +285,6 @@ class ApplicationBuilder:
         Returns:
             The application builder.
         """
-        print(f"Registering aggregate {aggregate_type.__name__}")
         container = self.contextual_binding.container_for(aggregate_type)
         container.register_singleton(
             AggregateFactory,
@@ -449,13 +448,7 @@ class ApplicationBuilder:
         return AggregateToRepositoryMap.from_repositories(all_repositories)
 
     def _build_upcaster_map(self) -> UpcasterMap:
-        # Get all upcaster types
-        upcaster_types = self.contextual_binding.all_of_type(EventUpcaster)
-        # Resolve them to get instances
-        all_upcasters = [
-            self.contextual_binding.resolve(upcaster_type)
-            for upcaster_type in upcaster_types
-        ]
+        all_upcasters = self.contextual_binding.resolve_all_of_type(EventUpcaster)
         return UpcasterMap.from_upcasters(all_upcasters)
 
     def _build_synchronous_delivery(self) -> SynchronousDelivery:
@@ -465,23 +458,6 @@ class ApplicationBuilder:
         )
         return SynchronousDelivery(transport, processors)
 
-    def _build_middleware(self) -> list[CommandMiddleware]:
-        """Build list of middleware instances for the command bus.
-
-        Returns:
-            List of configured middleware instances in registration
-            order.
-        """
-        all_middleware_types = self.contextual_binding.all_of_type(
-            CommandMiddleware
-        )
-        return [
-            self.contextual_binding.container_for(middleware_type).resolve(
-                middleware_type
-            )
-            for middleware_type in all_middleware_types
-        ]
-
     def _build_command_bus(self) -> CommandBus:
         """Build the command bus with middleware chain.
 
@@ -489,5 +465,5 @@ class ApplicationBuilder:
             Configured CommandBus instance.
         """
         root_handler = self.container.resolve(DelegateToAggregate)
-        middleware = self._build_middleware()
+        middleware = self.contextual_binding.resolve_all_of_type(CommandMiddleware)
         return CommandBus(root_handler, middleware)
