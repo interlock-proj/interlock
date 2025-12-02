@@ -112,7 +112,6 @@ class Application:
         in the order of their registration.
         """
         dependencies = self.contextual_binding.resolve_all_of_type(HasLifecycle)
-        print(dependencies)
         for dependency in dependencies:
             await dependency.on_startup()
 
@@ -127,7 +126,6 @@ class Application:
         """
 
         dependencies = self.contextual_binding.resolve_all_of_type(HasLifecycle)
-        print(dependencies)
         for dependency in reversed(dependencies):
             await dependency.on_shutdown()
 
