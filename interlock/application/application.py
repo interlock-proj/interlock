@@ -2,8 +2,8 @@ import asyncio
 from collections.abc import Callable
 from typing import Any, TypeVar
 
-from ..aggregates import (
-    Aggregate,
+from ..domain import Aggregate, Command
+from .aggregates import (
     AggregateRepository,
     AggregateFactory,
     AggregateCacheBackend,
@@ -11,15 +11,14 @@ from ..aggregates import (
     AggregateSnapshotStrategy,
     AggregateSnapshotStorageBackend,
 )
-from ..commands import (
-    Command,
+from .commands import (
     CommandBus,
     CommandMiddleware,
     DelegateToAggregate,
     CommandToAggregateMap,
     AggregateToRepositoryMap,
 )
-from ..events import (
+from .events import (
     EventBus,
     EventDelivery,
     EventStore,

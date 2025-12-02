@@ -2,9 +2,9 @@
 
 import pytest
 
-from interlock.aggregates.aggregate import Aggregate
+from interlock.domain import Aggregate
 from interlock.application.discovery import ClassScanner, ModuleScanner
-from interlock.commands import Command
+from interlock.domain import Command
 
 
 def test_scanner_imports_package():

@@ -13,12 +13,12 @@ import pytest
 from pydantic import BaseModel
 from ulid import ULID
 
-from interlock.aggregates.aggregate import Aggregate
 from interlock.application import ApplicationBuilder
-from interlock.commands import Command, CommandHandler, CommandMiddleware
-from interlock.events import InMemoryEventTransport
-from interlock.events.processing import InMemorySagaStateStore
-from interlock.events.store import EventStore, InMemoryEventStore
+from interlock.application.commands import CommandHandler, CommandMiddleware
+from interlock.application.events import InMemoryEventStore, InMemoryEventTransport
+from interlock.application.events.processing import InMemorySagaStateStore
+from interlock.application.events.store import EventStore
+from interlock.domain import Aggregate, Command
 from interlock.routing import applies_event, handles_command, intercepts
 
 
@@ -241,7 +241,7 @@ def execution_tracker() -> ExecutionTracker:
 @pytest.fixture
 def upcaster_map():
     """Create an empty UpcasterMap for testing."""
-    from interlock.events.upcasting.pipeline import UpcasterMap
+    from interlock.application.events.upcasting.pipeline import UpcasterMap
 
     return UpcasterMap()
 

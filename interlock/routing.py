@@ -335,7 +335,7 @@ def setup_command_routing(cls: type) -> MessageRouter:
         A configured MessageRouter for commands.
     """
     # Import here to avoid circular dependency
-    from .commands import Command
+    from .domain import Command
 
     return setup_routing(
         cls,
@@ -389,7 +389,7 @@ def setup_middleware_routing(cls: type) -> MessageRouter:
         A configured MessageRouter for command interceptors.
     """
     # Import here to avoid circular dependency
-    from .commands import Command
+    from .domain import Command
 
     return setup_routing(
         cls,

@@ -6,7 +6,8 @@ from typing import Any
 
 from ulid import ULID
 
-from ...aggregates import Aggregate, AggregateSnapshotStorageBackend
+from ...application.aggregates import AggregateSnapshotStorageBackend
+from ...domain import Aggregate
 from .connection import Neo4jConnectionManager
 
 

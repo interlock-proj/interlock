@@ -2,7 +2,7 @@
 
 from decimal import Decimal
 
-from interlock.commands import Command
+from interlock.domain import Command
 
 
 class DepositMoney(Command):

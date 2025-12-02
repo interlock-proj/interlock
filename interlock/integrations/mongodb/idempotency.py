@@ -7,7 +7,7 @@ PyMongo's async API with TTL indexes for automatic key expiration.
 from contextlib import suppress
 from datetime import datetime
 
-from interlock.commands.middleware.idempotency import (
+from interlock.application.commands.middleware.idempotency import (
     IdempotencyStorageBackend,
     IdempotencyTrackedCommand,
 )

@@ -9,7 +9,7 @@ from datetime import datetime
 
 from pydantic import BaseModel
 
-from interlock.events.processing.saga_state_store import SagaStateStore
+from interlock.application.events.processing.saga_state_store import SagaStateStore
 
 from .connection import MongoDBConnectionManager
 

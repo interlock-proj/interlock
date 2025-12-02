@@ -5,8 +5,9 @@ from typing import Any
 
 from ulid import ULID
 
-from ...aggregates.exceptions import ConcurrencyError
-from ...events import Event, EventStore
+from ...application.events import EventStore
+from ...domain import Event
+from ...domain.exceptions import ConcurrencyError
 from .connection import Neo4jConnectionManager
 
 # Cypher queries as constants

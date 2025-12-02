@@ -4,7 +4,7 @@ import importlib
 
 from pydantic import BaseModel
 
-from ...events.processing.saga_state_store import SagaStateStore
+from ...application.events.processing.saga_state_store import SagaStateStore
 from .connection import Neo4jConnectionManager
 
 # Cypher queries as constants (following Neo4j event store pattern)

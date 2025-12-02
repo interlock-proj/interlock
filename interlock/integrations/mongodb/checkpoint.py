@@ -8,7 +8,7 @@ from datetime import datetime
 
 from ulid import ULID
 
-from interlock.events.processing.checkpoint import Checkpoint, CheckpointBackend
+from interlock.application.events.processing.checkpoint import Checkpoint, CheckpointBackend
 
 from .connection import MongoDBConnectionManager
 

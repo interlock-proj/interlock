@@ -7,8 +7,8 @@ and register framework components from packages following naming conventions.
 from abc import ABC, abstractmethod
 from collections.abc import Iterable
 
-from ..aggregates.aggregate import Aggregate
-from ..commands import Command, CommandMiddleware
+from ..domain import Aggregate, Command
+from .commands import CommandMiddleware
 from .application import ApplicationBuilder
 from .discovery import ClassScanner, ModuleScanner
 
@@ -155,7 +155,7 @@ class EventProcessorsInPackage(ApplicationProfile):
             builder: ApplicationBuilder to configure
         """
         # Import here to avoid circular dependency
-        from ..events.processing import EventProcessor
+        from .events.processing import EventProcessor
 
         # Try multiple naming conventions
         for name in ["processor", "projection"]:
@@ -262,7 +262,7 @@ class ServicesInPackage(ApplicationProfile):
         Returns:
             True if class is a framework type
         """
-        from ..events.processing import EventProcessor
+        from .events.processing import EventProcessor
 
         framework_bases = (Aggregate, Command, CommandMiddleware, EventProcessor)
         try:
@@ -302,7 +302,7 @@ class UpcastersInPackage(ApplicationProfile):
             builder: ApplicationBuilder to configure
         """
         # Import here to avoid circular dependency
-        from ..events.upcasting import EventUpcaster
+        from .events.upcasting import EventUpcaster
 
         for module in self.scanner.find_modules("upcaster"):
             for upcaster_cls in ClassScanner.find_subclasses(module, EventUpcaster):  # type: ignore[type-abstract]

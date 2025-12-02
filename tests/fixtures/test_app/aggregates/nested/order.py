@@ -1,6 +1,6 @@
 """Nested order aggregate for testing recursive discovery."""
 
-from interlock.aggregates.aggregate import Aggregate
+from interlock.domain import Aggregate
 
 
 class Order(Aggregate):

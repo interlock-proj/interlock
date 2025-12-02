@@ -7,7 +7,8 @@ from typing import Any
 
 from ulid import ULID
 
-from interlock.aggregates import Aggregate, AggregateSnapshotStorageBackend
+from interlock.application.aggregates import AggregateSnapshotStorageBackend
+from interlock.domain import Aggregate
 
 from .connection import MongoDBConnectionManager
 

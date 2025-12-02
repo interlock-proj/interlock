@@ -10,9 +10,9 @@ from typing import Any
 
 from ulid import ULID
 
-from interlock.aggregates.exceptions import ConcurrencyError
-from interlock.events import Event
-from interlock.events.store import EventStore
+from interlock.application.events import EventStore
+from interlock.domain import Event
+from interlock.domain.exceptions import ConcurrencyError
 
 from .connection import MongoDBConnectionManager
 

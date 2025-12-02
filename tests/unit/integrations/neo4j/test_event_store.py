@@ -7,8 +7,8 @@ import pytest
 from pydantic import BaseModel
 from ulid import ULID
 
-from interlock.aggregates.exceptions import ConcurrencyError
-from interlock.events import Event
+from interlock.domain.exceptions import ConcurrencyError
+from interlock.domain import Event
 from interlock.integrations.neo4j import Neo4jConnectionManager, Neo4jEventStore
 
 
