@@ -1,6 +1,7 @@
 import asyncio
 from collections.abc import Callable
-from typing import Any, TypeVar
+from typing import Any, TypeVar, Protocol, runtime_checkable
+from types import TracebackType
 
 from ..domain import Aggregate, Command
 from .aggregates import (
@@ -41,6 +42,17 @@ from .events import (
 from .container import DependencyContainer, ContextualBinding
 
 T = TypeVar("T")
+
+
+@runtime_checkable
+class HasLifecycle(Protocol):
+    async def on_startup(self) -> None:
+        """Called when the application is started."""
+        ...
+
+    async def on_shutdown(self) -> None:
+        """Called when the application is shutdown."""
+        ...
 
 
 class Application:
@@ -91,9 +103,47 @@ class Application:
         """
         return self.resolve(dependency_type)
 
-    async def run_event_processors(
-        self, *processors: type[EventProcessor]
+    async def startup(self) -> None:
+        """Startup the application.
+
+        This method will startup the application. The application will be
+        started by calling the on_startup method on all dependencies that
+        implement the `HasLifecycle` protocol. The dependencies are started
+        in the order of their registration.
+        """
+        dependencies = self.contextual_binding.resolve_all_of_type(HasLifecycle)
+        print(dependencies)
+        for dependency in dependencies:
+            await dependency.on_startup()
+
+    async def shutdown(self) -> None:
+        """Shutdown the application.
+
+        This method will shutdown the application. The application will be
+        shutdown by calling the on_shutdown method on all dependencies that
+        implement the `HasLifecycle` protocol. The dependencies are shutdown
+        in the reverse order of their registration.
+
+        """
+
+        dependencies = self.contextual_binding.resolve_all_of_type(HasLifecycle)
+        print(dependencies)
+        for dependency in reversed(dependencies):
+            await dependency.on_shutdown()
+
+    async def __aenter__(self) -> "Application":
+        await self.startup()
+        return self
+
+    async def __aexit__(
+        self,
+        _exc_type: type[BaseException] | None,
+        _exc_value: BaseException | None,
+        _traceback: TracebackType | None,
     ) -> None:
+        await self.shutdown()
+
+    async def run_event_processors(self, *processors: type[EventProcessor]) -> None:
         """Run the event processors for the application.
 
         This method will run the event processors for the application of the
@@ -250,9 +300,7 @@ class ApplicationBuilder:
         Returns:
             The application builder
         """
-        self.container.register_singleton(
-            dependency_type, factory or dependency_type
-        )
+        self.container.register_singleton(dependency_type, factory or dependency_type)
         return self
 
     def register_aggregate(
@@ -287,8 +335,7 @@ class ApplicationBuilder:
         """
         container = self.contextual_binding.container_for(aggregate_type)
         container.register_singleton(
-            AggregateFactory,
-            lambda: AggregateFactory(aggregate_type)
+            AggregateFactory, lambda: AggregateFactory(aggregate_type)
         )
         container.register_singleton(Aggregate, aggregate_type)
         container.register_singleton(AggregateRepository)
@@ -453,9 +500,7 @@ class ApplicationBuilder:
 
     def _build_synchronous_delivery(self) -> SynchronousDelivery:
         transport = self.container.resolve(EventTransport)
-        processors = self.contextual_binding.resolve_all_of_type(
-            EventProcessor
-        )
+        processors = self.contextual_binding.resolve_all_of_type(EventProcessor)
         return SynchronousDelivery(transport, processors)
 
     def _build_command_bus(self) -> CommandBus:

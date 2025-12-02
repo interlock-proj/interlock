@@ -5,7 +5,7 @@ applications. It includes command handling, event processing, repository managem
 and application lifecycle management.
 """
 
-from .application import Application, ApplicationBuilder
+from .application import Application, ApplicationBuilder, HasLifecycle
 from .configurators import ApplicationProfile, ApplicationProfileSet
 
 __all__ = [
@@ -13,4 +13,5 @@ __all__ = [
     "ApplicationBuilder",
     "ApplicationProfile",
     "ApplicationProfileSet",
+    "HasLifecycle",
 ]

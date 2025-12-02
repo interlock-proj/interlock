@@ -1,6 +1,7 @@
 import inspect
 from abc import ABC, abstractmethod
 from collections import OrderedDict
+from itertools import chain
 from typing import Any, Callable, Generic, Optional, TypeVar, get_origin
 
 T = TypeVar("T")
@@ -9,7 +10,7 @@ T = TypeVar("T")
 class DependencyNotFoundError(Exception):
     @classmethod
     def from_type(cls, dependency_type: type[T]) -> "DependencyNotFoundError":
-        if hasattr(dependency_type, '__name__'):
+        if hasattr(dependency_type, "__name__"):
             return cls(f"Dependency {dependency_type.__name__} not found")
         else:
             return cls(f"Dependency {dependency_type} not found")
@@ -140,7 +141,13 @@ class ContextualBinding:
         return [self.resolve(t) for t in self.all_of_type(base)]
 
     def all_of_type(self, base: type[T]) -> list[type[T]]:
-        return [c for c in self.type_to_child_container if issubclass(c, base)]
+        return [
+            c
+            for c in chain(
+                self.type_to_child_container.keys(), self.container.dependencies.keys()
+            )
+            if issubclass(c, base)
+        ]
 
     def resolve_all(self) -> list[T]:
         # Resolve all dependencies registered in the root container
