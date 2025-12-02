@@ -9,4 +9,3 @@ class ConcurrencyError(Exception):
     """
 
     pass
-

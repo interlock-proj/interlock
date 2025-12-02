@@ -122,9 +122,7 @@ class Application:
         shutdown by calling the on_shutdown method on all dependencies that
         implement the `HasLifecycle` protocol. The dependencies are shutdown
         in the reverse order of their registration.
-
         """
-
         dependencies = self.contextual_binding.resolve_all_of_type(HasLifecycle)
         for dependency in reversed(dependencies):
             await dependency.on_shutdown()

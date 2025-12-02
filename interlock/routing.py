@@ -1,4 +1,3 @@
-
 import inspect
 from abc import ABC, abstractmethod
 from collections.abc import Callable
@@ -28,9 +27,7 @@ class DefaultHandler(ABC):
         self.operation_name = operation_name
 
     @abstractmethod
-    def __call__(
-        self, message: Any, instance: Any, *args: Any, **kwargs: Any
-    ) -> Any:
+    def __call__(self, message: Any, instance: Any, *args: Any, **kwargs: Any) -> Any:
         """Handle an unregistered message type.
 
         Args:
@@ -50,9 +47,7 @@ class RaiseHandler(DefaultHandler):
 
     __slots__ = ()
 
-    def __call__(
-        self, message: Any, instance: Any, *args: Any, **kwargs: Any
-    ) -> Any:
+    def __call__(self, message: Any, instance: Any, *args: Any, **kwargs: Any) -> Any:
         raise NotImplementedError(
             f"No {self.operation_name} registered for "
             f"{self.base_type.__name__} type {type(message).__name__}"
@@ -64,16 +59,12 @@ class IgnoreHandler(DefaultHandler):
 
     __slots__ = ()
 
-    def __call__(
-        self, message: Any, instance: Any, *args: Any, **kwargs: Any
-    ) -> Any:
+    def __call__(self, message: Any, instance: Any, *args: Any, **kwargs: Any) -> Any:
         # Silently ignore unregistered types
         pass
 
 
-def _extract_handler_type(
-    func: Callable[..., object], param_index: int = 1
-) -> type:
+def _extract_handler_type(func: Callable[..., object], param_index: int = 1) -> type:
     """Extract the type annotation from a handler method.
 
     Args:
@@ -166,14 +157,10 @@ class MessageRouter:
         # efficiently. We create a minimal wrapper to swap argument
         # order and pass through any additional arguments
         self._dispatch.register(message_type)(
-            lambda msg, inst, *args, h=handler, **kwargs: h(
-                inst, msg, *args, **kwargs
-            )
+            lambda msg, inst, *args, h=handler, **kwargs: h(inst, msg, *args, **kwargs)
         )
 
-    def route(
-        self, instance: Any, message: Any, *args: Any, **kwargs: Any
-    ) -> object:
+    def route(self, instance: Any, message: Any, *args: Any, **kwargs: Any) -> object:
         """Route a message to its registered handler.
 
         Args:
@@ -223,18 +210,10 @@ class HandlerDecorator:
 
 
 # Create decorator instances
-handles_command = HandlerDecorator(
-    "_is_command_handler", "_handles_command_type"
-)
-applies_event = HandlerDecorator(
-    "_is_event_applier", "_applies_event_type"
-)
-handles_event = HandlerDecorator(
-    "_is_event_handler", "_handles_event_type"
-)
-intercepts = HandlerDecorator(
-    "_is_command_interceptor", "_intercepts_command_type"
-)
+handles_command = HandlerDecorator("_is_command_handler", "_handles_command_type")
+applies_event = HandlerDecorator("_is_event_applier", "_applies_event_type")
+handles_event = HandlerDecorator("_is_event_handler", "_handles_event_type")
+intercepts = HandlerDecorator("_is_command_interceptor", "_intercepts_command_type")
 
 # Add docstrings
 handles_command.__doc__ = """Decorator marking a method as a command handler.

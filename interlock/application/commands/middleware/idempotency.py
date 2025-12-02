@@ -35,16 +35,12 @@ class IdempotencyStorageBackend(ABC):
         return NullIdempotencyStorageBackend()
 
     @abstractmethod
-    async def store_processed_command(
-        self, command: IdempotencyTrackedCommand
-    ) -> None:
+    async def store_processed_command(self, command: IdempotencyTrackedCommand) -> None:
         """Store the command as processed."""
         ...
 
     @abstractmethod
-    async def has_processed_command(
-        self, command: IdempotencyTrackedCommand
-    ) -> bool:
+    async def has_processed_command(self, command: IdempotencyTrackedCommand) -> bool:
         """Check if the command has been processed."""
         ...
 
@@ -59,9 +55,7 @@ class IdempotencyMiddleware(CommandMiddleware):
 
     __slots__ = ("idempotency_storage_backend",)
 
-    def __init__(
-        self, idempotency_storage_backend: IdempotencyStorageBackend
-    ):
+    def __init__(self, idempotency_storage_backend: IdempotencyStorageBackend):
         self.idempotency_storage_backend = idempotency_storage_backend
 
     @intercepts
@@ -74,18 +68,14 @@ class IdempotencyMiddleware(CommandMiddleware):
             command: The command with idempotency tracking.
             next: The next handler in the chain.
         """
-        if await self.idempotency_storage_backend.has_processed_command(
-            command
-        ):
+        if await self.idempotency_storage_backend.has_processed_command(command):
             LOGGER.warning(
                 "Skipping previously processed command",
                 extra={"idempotency_key": command.idempotency_key},
             )
             return
         await next(command)
-        await self.idempotency_storage_backend.store_processed_command(
-            command
-        )
+        await self.idempotency_storage_backend.store_processed_command(command)
 
 
 class InMemoryIdempotencyStorageBackend(IdempotencyStorageBackend):
@@ -101,14 +91,10 @@ class InMemoryIdempotencyStorageBackend(IdempotencyStorageBackend):
     def __init__(self):
         self.idempotency_keys: set[str] = set()
 
-    async def store_processed_command(
-        self, command: IdempotencyTrackedCommand
-    ) -> None:
+    async def store_processed_command(self, command: IdempotencyTrackedCommand) -> None:
         self.idempotency_keys.add(command.idempotency_key)
 
-    async def has_processed_command(
-        self, command: IdempotencyTrackedCommand
-    ) -> bool:
+    async def has_processed_command(self, command: IdempotencyTrackedCommand) -> bool:
         return command.idempotency_key in self.idempotency_keys
 
 
@@ -118,12 +104,8 @@ class NullIdempotencyStorageBackend(IdempotencyStorageBackend):
     This backend is used to do nothing.
     """
 
-    async def store_processed_command(
-        self, command: IdempotencyTrackedCommand
-    ) -> None:
+    async def store_processed_command(self, command: IdempotencyTrackedCommand) -> None:
         pass
 
-    async def has_processed_command(
-        self, command: IdempotencyTrackedCommand
-    ) -> bool:
+    async def has_processed_command(self, command: IdempotencyTrackedCommand) -> bool:
         return False

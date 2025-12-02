@@ -222,11 +222,15 @@ def saga_step(
 
                 # Mark complete
                 await self.mark_step_complete(extracted_saga_id, step_name)
-                self.logger.info(f"Step '{step_name}' completed for saga {extracted_saga_id}")
+                self.logger.info(
+                    f"Step '{step_name}' completed for saga {extracted_saga_id}"
+                )
 
                 return result
             except Exception as e:
-                self.logger.error(f"Step '{step_name}' failed for saga {extracted_saga_id}: {e}")
+                self.logger.error(
+                    f"Step '{step_name}' failed for saga {extracted_saga_id}: {e}"
+                )
                 raise
 
         return wrapper

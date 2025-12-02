@@ -59,7 +59,11 @@ class ModuleScanner:
             myapp.aggregates.shopping_cart
         """
         # Try both singular and plural forms
-        variants = [subpackage, subpackage + "s"] if not subpackage.endswith("s") else [subpackage]
+        variants = (
+            [subpackage, subpackage + "s"]
+            if not subpackage.endswith("s")
+            else [subpackage]
+        )
 
         for variant in variants:
             # Try as direct module (e.g., myapp/aggregates.py)

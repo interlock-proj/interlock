@@ -208,4 +208,3 @@ class Aggregate(BaseModel):
         """
         for event in events:
             self.apply(event)
-

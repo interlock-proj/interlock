@@ -115,8 +115,13 @@ async def test_command_bus_routes_different_commands(
     aggregate_id: ULID, bank_account_app, event_store
 ):
     from decimal import Decimal
-    await bank_account_app.dispatch(OpenAccount(aggregate_id=aggregate_id, owner="Alice"))
-    await bank_account_app.dispatch(DepositMoney(aggregate_id=aggregate_id, amount=Decimal("5")))
+
+    await bank_account_app.dispatch(
+        OpenAccount(aggregate_id=aggregate_id, owner="Alice")
+    )
+    await bank_account_app.dispatch(
+        DepositMoney(aggregate_id=aggregate_id, amount=Decimal("5"))
+    )
 
     # Verify by checking events were saved
     events = await event_store.load_events(aggregate_id, 1)
@@ -126,7 +131,9 @@ async def test_command_bus_routes_different_commands(
 
 
 @pytest.mark.asyncio
-async def test_command_bus_raises_on_unregistered_command(aggregate_id: ULID, base_app_builder):
+async def test_command_bus_raises_on_unregistered_command(
+    aggregate_id: ULID, base_app_builder
+):
     # Build an app without registering BankAccount aggregate
     # This should fail when trying to dispatch DepositMoney
     from interlock.application.container import DependencyNotFoundError
@@ -138,7 +145,9 @@ async def test_command_bus_raises_on_unregistered_command(aggregate_id: ULID, ba
 
 
 @pytest.mark.asyncio
-async def test_create_builds_working_bus(aggregate_id: ULID, bank_account_app, event_store):
+async def test_create_builds_working_bus(
+    aggregate_id: ULID, bank_account_app, event_store
+):
     await bank_account_app.dispatch(DepositMoney(aggregate_id=aggregate_id, amount=15))
 
     # Verify by checking events were saved
@@ -176,6 +185,7 @@ async def test_create_applies_middleware_to_all_subclasses(
 ):
     # Middleware intercepts base Command type, applies to all
     from decimal import Decimal
+
     app = (
         base_app_builder.register_aggregate(BankAccount)
         .register_middleware(ExecutionTracker)
@@ -201,9 +211,7 @@ async def test_create_does_not_apply_non_matching_middleware(
     # Create middleware that only intercept specific command types
     class DepositTracker(ExecutionTracker):
         @intercepts
-        async def track_deposit(
-            self, command: DepositMoney, next
-        ):
+        async def track_deposit(self, command: DepositMoney, next):
             self.executions.append(("start", type(command).__name__))
             result = await next(command)
             self.executions.append(("end", type(command).__name__))

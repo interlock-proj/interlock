@@ -74,7 +74,9 @@ class AggregateSnapshotStorageBackend(ABC):
         pass
 
     @abstractmethod
-    async def list_aggregate_ids_by_type(self, aggregate_type: type["Aggregate"]) -> list[ULID]:
+    async def list_aggregate_ids_by_type(
+        self, aggregate_type: type["Aggregate"]
+    ) -> list[ULID]:
         """Get all aggregate IDs of a given type that have snapshots.
 
         This is used by catchup strategies to discover all aggregates of a
@@ -130,7 +132,9 @@ class NullAggregateSnapshotStorageBackend(AggregateSnapshotStorageBackend):
     ) -> Optional["Aggregate"]:
         return None
 
-    async def list_aggregate_ids_by_type(self, aggregate_type: type["Aggregate"]) -> list[ULID]:
+    async def list_aggregate_ids_by_type(
+        self, aggregate_type: type["Aggregate"]
+    ) -> list[ULID]:
         """No snapshots stored, so return empty list."""
         return []
 
@@ -157,7 +161,9 @@ class InMemoryAggregateSnapshotStorageBackend(AggregateSnapshotStorageBackend):
                 return snapshot
         return None
 
-    async def list_aggregate_ids_by_type(self, aggregate_type: type["Aggregate"]) -> list[ULID]:
+    async def list_aggregate_ids_by_type(
+        self, aggregate_type: type["Aggregate"]
+    ) -> list[ULID]:
         """List all aggregate IDs that have snapshots of the given type.
 
         Args:

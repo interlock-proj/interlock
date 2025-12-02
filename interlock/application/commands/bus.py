@@ -37,9 +37,7 @@ class CommandMiddleware:
 
         cls._command_router = setup_middleware_routing(cls)
 
-    async def intercept(
-        self, command: Command, next: CommandHandler
-    ) -> None:
+    async def intercept(self, command: Command, next: CommandHandler) -> None:
         """Route command to interceptor method or forward to next.
 
         This method is called by the CommandBus for each command. It
@@ -82,9 +80,7 @@ class CommandToAggregateMap:
         for value in aggregate_type.__dict__.values():
             if hasattr(value, "_handles_command_type"):
                 command_type = value._handles_command_type
-                self.command_to_aggregate_map[
-                    command_type
-                ] = aggregate_type
+                self.command_to_aggregate_map[command_type] = aggregate_type
 
     def get(self, command_type: type[Command]) -> type[Aggregate]:
         return self.command_to_aggregate_map[command_type]
@@ -104,13 +100,9 @@ class AggregateToRepositoryMap:
         self.aggregate_to_repository_map = {}
 
     def add(self, repository: AggregateRepository):
-        self.aggregate_to_repository_map[
-            repository.aggregate_type
-        ] = repository
+        self.aggregate_to_repository_map[repository.aggregate_type] = repository
 
-    def get(
-        self, aggregate_type: type[Aggregate]
-    ) -> AggregateRepository:
+    def get(self, aggregate_type: type[Aggregate]) -> AggregateRepository:
         return self.aggregate_to_repository_map[aggregate_type]
 
 
@@ -124,15 +116,9 @@ class DelegateToAggregate:
         self.aggregate_to_repository_map = aggregate_to_repository_map
 
     async def handle(self, command: Command) -> None:
-        aggregate_type = self.command_to_aggregate_map.get(
-            type(command)
-        )
-        repository = self.aggregate_to_repository_map.get(
-            aggregate_type
-        )
-        async with repository.acquire(
-            command.aggregate_id
-        ) as aggregate:
+        aggregate_type = self.command_to_aggregate_map.get(type(command))
+        repository = self.aggregate_to_repository_map.get(aggregate_type)
+        async with repository.acquire(command.aggregate_id) as aggregate:
             aggregate.handle(command)
 
 

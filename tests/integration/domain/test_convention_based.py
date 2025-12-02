@@ -15,7 +15,6 @@ async def test_convention_based_discovers_aggregates():
         .register_dependency(EventStore, InMemoryEventStore)
         .register_dependency(InMemoryEventTransport)
         .convention_based("tests.fixtures.test_app")
-        
         .build()
     )
 
@@ -64,7 +63,7 @@ async def test_convention_based_discovers_nested_aggregates():
         .convention_based("tests.fixtures.test_app")
         .build()
     )
-    
+
     # If Order was properly registered, we should be able to use it
     # (this test mainly verifies recursive discovery works without errors)
     assert app is not None
@@ -83,7 +82,6 @@ async def test_convention_based_discovers_services():
         .register_dependency(EventStore, InMemoryEventStore)
         .register_dependency(InMemoryEventTransport)
         .convention_based("tests.fixtures.test_app")
-        
         .build()
     )
 
@@ -101,7 +99,6 @@ async def test_multiple_convention_based_calls_accumulate():
         .register_dependency(InMemoryEventTransport)
         .convention_based("tests.fixtures.test_app")
         .convention_based("tests.fixtures.test_app")  # Call twice
-        
         .build()
     )
 
@@ -125,7 +122,6 @@ async def test_manual_override_after_convention_based():
         ApplicationBuilder()
         .convention_based("tests.fixtures.test_app")
         .register_dependency(EventStore, lambda: custom_store)  # Override
-        
         .build()
     )
 
@@ -143,7 +139,6 @@ async def test_convention_based_with_no_matching_packages():
         .register_dependency(EventStore, InMemoryEventStore)
         .register_dependency(InMemoryEventTransport)
         .convention_based("tests.unit")  # Has no conventional structure
-        
         .build()
     )
 

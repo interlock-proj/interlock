@@ -330,7 +330,9 @@ class FromAggregateSnapshot(CatchupStrategy[P], Generic[P]):
 
         # Filter out already processed
         remaining_ids = [
-            agg_id for agg_id in all_ids if agg_id not in checkpoint.processed_aggregate_ids
+            agg_id
+            for agg_id in all_ids
+            if agg_id not in checkpoint.processed_aggregate_ids
         ]
 
         # Process each aggregate

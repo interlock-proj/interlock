@@ -118,7 +118,9 @@ class InMemoryEventStore(EventStore):
         current_version = current_events[-1].sequence_number if current_events else 0
 
         if current_version != expected_version:
-            raise ConcurrencyError(f"Expected version {expected_version}, got {current_version}")
+            raise ConcurrencyError(
+                f"Expected version {expected_version}, got {current_version}"
+            )
 
         # Version matches, safe to append events
         for event in events:

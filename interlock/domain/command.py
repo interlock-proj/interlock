@@ -20,4 +20,3 @@ class Command(BaseModel):
     correlation_id: ULID | None = None
     causation_id: ULID | None = None
     command_id: ULID = Field(default_factory=ULID)
-

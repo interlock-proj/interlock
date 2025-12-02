@@ -141,7 +141,7 @@ class UpcasterMap:
         map = UpcasterMap()
         for upcaster in upcasters:
             # Skip abstract base classes or types without proper generic info
-            if type(upcaster).__name__ in ('ABCMeta', 'type'):
+            if type(upcaster).__name__ in ("ABCMeta", "type"):
                 continue
             map.register_upcaster(upcaster)
         return map

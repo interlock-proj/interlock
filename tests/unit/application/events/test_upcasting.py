@@ -42,7 +42,9 @@ class AccountCreatedV1ToV2(EventUpcaster[AccountCreatedV1, AccountCreatedV2]):
 
     async def upcast_payload(self, data: AccountCreatedV1) -> AccountCreatedV2:
         parts = data.owner_name.split(" ", 1)
-        return AccountCreatedV2(first_name=parts[0], last_name=parts[1] if len(parts) > 1 else "")
+        return AccountCreatedV2(
+            first_name=parts[0], last_name=parts[1] if len(parts) > 1 else ""
+        )
 
 
 class AccountCreatedV2ToV3(EventUpcaster[AccountCreatedV2, AccountCreatedV3]):
@@ -50,7 +52,9 @@ class AccountCreatedV2ToV3(EventUpcaster[AccountCreatedV2, AccountCreatedV3]):
 
     async def upcast_payload(self, data: AccountCreatedV2) -> AccountCreatedV3:
         email = f"{data.first_name.lower()}.{data.last_name.lower()}@example.com"
-        return AccountCreatedV3(first_name=data.first_name, last_name=data.last_name, email=email)
+        return AccountCreatedV3(
+            first_name=data.first_name, last_name=data.last_name, email=email
+        )
 
 
 class ConditionalUpcaster(EventUpcaster[AccountCreatedV1, AccountCreatedV2]):
@@ -217,7 +221,9 @@ class TestUpcastingPipeline:
 
         assert AccountCreatedV1 in upcaster_map.upcasters
         assert len(upcaster_map.upcasters[AccountCreatedV1]) == 1
-        assert isinstance(upcaster_map.upcasters[AccountCreatedV1][0], AccountCreatedV1ToV2)
+        assert isinstance(
+            upcaster_map.upcasters[AccountCreatedV1][0], AccountCreatedV1ToV2
+        )
 
     def test_register_upcaster_with_explicit_types(self, upcaster_map):
         """Should support explicit type registration."""

@@ -160,7 +160,9 @@ class EventProcessorsInPackage(ApplicationProfile):
         # Try multiple naming conventions
         for name in ["processor", "projection"]:
             for module in self.scanner.find_modules(name):
-                for processor_cls in ClassScanner.find_subclasses(module, EventProcessor):
+                for processor_cls in ClassScanner.find_subclasses(
+                    module, EventProcessor
+                ):
                     builder.register_event_processor(processor_cls)
 
 

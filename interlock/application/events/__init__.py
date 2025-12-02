@@ -88,4 +88,3 @@ __all__ = [
     "UpcastingPipeline",
     "UpcasterMap",
 ]
-

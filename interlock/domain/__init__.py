@@ -5,7 +5,7 @@ their domain models:
 
 - Aggregate: Base class for domain aggregates that emit events
 - Command: Base class for command messages
-- Event: Base class for event messages  
+- Event: Base class for event messages
 - ConcurrencyError: Exception for optimistic concurrency conflicts
 """
 
@@ -21,4 +21,3 @@ __all__ = [
     "utc_now",
     "ConcurrencyError",
 ]
-

@@ -15,4 +15,3 @@ class ExecutionTracker(CommandMiddleware):
         result = await next(command)
         self.executions.append(("end", type(command).__name__))
         return result
-

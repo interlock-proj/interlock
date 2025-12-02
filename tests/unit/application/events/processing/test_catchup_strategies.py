@@ -63,9 +63,7 @@ class UserProjector(AggregateProjector[User, UserProcessor]):
         }
 
 
-def create_event(
-    aggregate_id: ULID, sequence_number: int, data: BaseModel
-) -> Event:
+def create_event(aggregate_id: ULID, sequence_number: int, data: BaseModel) -> Event:
     return Event(
         id=ULID(),
         aggregate_id=aggregate_id,
@@ -97,18 +95,18 @@ async def test_snapshot_catchup_uses_projector():
     # Mock repository and checkpoint backend
     mock_repo = Mock()
     mock_repo.load.return_value = user
-    
+
     mock_checkpoint = Mock()
     mock_checkpoint.load_checkpoint = Mock(return_value=None)
     mock_checkpoint.save_checkpoint = Mock(return_value=None)
-    
+
     # Mock async methods
     async def async_load_checkpoint(processor_name):
         return None
-    
+
     async def async_save_checkpoint(checkpoint):
         pass
-    
+
     mock_checkpoint.load_checkpoint = async_load_checkpoint
     mock_checkpoint.save_checkpoint = async_save_checkpoint
 

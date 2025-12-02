@@ -45,9 +45,7 @@ class ConcurrencyRetryMiddleware(CommandMiddleware):
                 return
             except ConcurrencyError as e:
                 last_error = e
-                LOGGER.warning(
-                    f"Concurrency error on attempt {attempt + 1}: {e}"
-                )
+                LOGGER.warning(f"Concurrency error on attempt {attempt + 1}: {e}")
                 await asyncio.sleep(self.retry_delay)
         raise ConcurrencyError(
             f"Max retries ({self.max_retries}) reached"

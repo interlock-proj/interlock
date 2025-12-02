@@ -8,7 +8,7 @@ from ulid import ULID
 class ExecutionContext:
     """Immutable context for tracking request flow through the system.
 
-    ExecutionContext captures the causal relationship between commands and 
+    ExecutionContext captures the causal relationship between commands and
     events as they flow through the system, enabling distributed tracing and debugging.
 
     Attributes:
