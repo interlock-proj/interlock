@@ -484,30 +484,24 @@ class ApplicationBuilder:
         return CommandToAggregateMap.from_aggregates(all_aggregates)
 
     def _build_aggregate_to_repository_map(self) -> AggregateToRepositoryMap:
-        all_aggregates = self.contextual_binding.all_of_type(Aggregate)
         all_repositories = [
             self.contextual_binding.container_for(aggregate).resolve(
                 AggregateRepository
             )
-            for aggregate in all_aggregates
+            for aggregate in self.contextual_binding.all_of_type(Aggregate)
         ]
         return AggregateToRepositoryMap.from_repositories(all_repositories)
 
     def _build_upcaster_map(self) -> UpcasterMap:
-        all_upcasters = self.contextual_binding.resolve_all_of_type(EventUpcaster)
-        return UpcasterMap.from_upcasters(all_upcasters)
+        all = self.contextual_binding.resolve_all_of_type(EventUpcaster)
+        return UpcasterMap.from_upcasters(all)
 
     def _build_synchronous_delivery(self) -> SynchronousDelivery:
         transport = self.container.resolve(EventTransport)
-        processors = self.contextual_binding.resolve_all_of_type(EventProcessor)
-        return SynchronousDelivery(transport, processors)
+        all = self.contextual_binding.resolve_all_of_type(EventProcessor)
+        return SynchronousDelivery(transport, all)
 
     def _build_command_bus(self) -> CommandBus:
-        """Build the command bus with middleware chain.
-
-        Returns:
-            Configured CommandBus instance.
-        """
         root_handler = self.container.resolve(DelegateToAggregate)
-        middleware = self.contextual_binding.resolve_all_of_type(CommandMiddleware)
-        return CommandBus(root_handler, middleware)
+        all = self.contextual_binding.resolve_all_of_type(CommandMiddleware)
+        return CommandBus(root_handler, all)
