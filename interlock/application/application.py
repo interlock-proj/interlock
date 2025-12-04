@@ -40,7 +40,7 @@ from .events import (
     UpcasterMap,
 )
 from .container import DependencyContainer, ContextualBinding
-from .events.processing.saga_state_store import SagaStateStore
+from .events.processing import SagaStateStore
 
 T = TypeVar("T")
 

@@ -46,12 +46,8 @@ class SagaScenario(Scenario[TSagaState], Generic[TSaga, TSagaState]):
         saga_type: Type[TSaga],
     ):
         super().__init__()
-        from interlock.application.events.processing.saga_state_store import (
-            InMemorySagaStateStore,
-        )
-
         self.saga_type = saga_type
-        self.state_store = InMemorySagaStateStore()
+        self.state_store = SagaStateStore.in_memory()
         self.saga = saga_type(self.state_store)
 
     async def perform_actions(self) -> None:

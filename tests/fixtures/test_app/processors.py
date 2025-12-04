@@ -4,10 +4,7 @@ from decimal import Decimal
 from pydantic import BaseModel
 
 from interlock.application.events import EventProcessor, Saga
-from interlock.application.events.processing import saga_step
-from interlock.application.events.processing.saga_state_store import (
-    SagaStateStore,
-)
+from interlock.application.events.processing import saga_step, SagaStateStore
 from interlock.routing import handles_event
 
 from .aggregates.bank_account import (

@@ -9,7 +9,6 @@ from interlock.application.events.processing import (
     SagaStateStore,
     saga_step,
 )
-from interlock.routing import handles_event
 
 
 class CheckoutInitiated(BaseModel):
