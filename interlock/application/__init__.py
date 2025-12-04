@@ -6,12 +6,11 @@ and application lifecycle management.
 """
 
 from .application import Application, ApplicationBuilder, HasLifecycle
-from .configurators import ApplicationProfile, ApplicationProfileSet
+from .configurators import ApplicationProfile
 
 __all__ = [
     "Application",
     "ApplicationBuilder",
     "ApplicationProfile",
-    "ApplicationProfileSet",
     "HasLifecycle",
 ]

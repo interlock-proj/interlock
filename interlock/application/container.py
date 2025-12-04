@@ -40,13 +40,11 @@ class FactoryDependency(Dependency[T]):
         return self.factory(**self.get_dependencies(container))
 
     def get_dependencies(self, container: "DependencyContainer") -> dict[type, Any]:
-        # inspect the signature of factory to get the argument names -> values
-        sig = inspect.signature(self.factory)
         return {
             k: container.resolve(v.annotation)
-            for k, v in sig.parameters.items()
+            for k, v in inspect.signature(self.factory).parameters.items()
             if v.annotation is not inspect.Parameter.empty
-            and v.default is inspect.Parameter.empty  # Skip parameters with defaults
+            and v.default is inspect.Parameter.empty
         }
 
 

@@ -457,10 +457,10 @@ class ApplicationBuilder:
         Returns:
             The application builder.
         """
-        from .configurators import ApplicationProfileSet
+        from .configurators import ApplicationProfile
 
-        profile = ApplicationProfileSet.convention_based(package_name)
-        profile.configure(self)
+        for profile in ApplicationProfile.convention_based(package_name):
+            profile.configure(self)
         return self
 
     def build(self) -> Application:

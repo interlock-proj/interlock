@@ -14,6 +14,55 @@ from typing import TypeVar
 T = TypeVar("T")
 
 
+def _should_skip_module(module_name: str) -> bool:
+    """Check if a module should be skipped during scanning.
+
+    Args:
+        module_name: Base name of the module to check
+
+    Returns:
+        True if module should be skipped
+    """
+    return module_name.startswith("test_") or (
+        module_name.startswith("_") and module_name != "__init__"
+    )
+
+
+def _get_module_variants(name: str) -> list[str]:
+    """Get singular and plural variants of a module name.
+
+    Args:
+        name: Module name to get variants for
+
+    Returns:
+        List of name variants to try [original, plural]
+
+    Examples:
+        >>> _get_module_variants("aggregate")
+        ["aggregate", "aggregates"]
+        >>> _get_module_variants("services")
+        ["services"]
+    """
+    if name.endswith("s"):
+        return [name]
+    return [name, name + "s"]
+
+
+def _try_import_module(module_name: str) -> ModuleType | None:
+    """Try to import a module, returning None if it doesn't exist.
+
+    Args:
+        module_name: Fully qualified module name
+
+    Returns:
+        Imported module or None if not found
+    """
+    try:
+        return importlib.import_module(module_name)
+    except (ImportError, ModuleNotFoundError):
+        return None
+
+
 class ModuleScanner:
     """Recursively scan packages for Python modules.
 
@@ -42,7 +91,8 @@ class ModuleScanner:
     def find_modules(self, subpackage: str) -> Iterable[ModuleType]:
         """Find all modules in a subpackage.
 
-        Supports both singular and plural forms (e.g., 'aggregate' and 'aggregates').
+        Supports both singular and plural forms
+        (e.g., 'aggregate' and 'aggregates').
         Searches recursively through all subpackages.
 
         Args:
@@ -58,36 +108,21 @@ class ModuleScanner:
             myapp.aggregates.bank_account
             myapp.aggregates.shopping_cart
         """
-        # Try both singular and plural forms
-        variants = (
-            [subpackage, subpackage + "s"]
-            if not subpackage.endswith("s")
-            else [subpackage]
-        )
+        for variant in _get_module_variants(subpackage):
+            module_path = f"{self.package_name}.{variant}"
+            module = _try_import_module(module_path)
 
-        for variant in variants:
-            # Try as direct module (e.g., myapp/aggregates.py)
-            try:
-                module_name = f"{self.package_name}.{variant}"
-                module = importlib.import_module(module_name)
-                if not self._should_skip_module(module):
-                    yield module
-            except (ImportError, ModuleNotFoundError):
-                pass  # Not a module, might be a package
+            if module is None:
+                continue
 
-            # Try as package (e.g., myapp/aggregates/__init__.py and children)
-            try:
-                package_name = f"{self.package_name}.{variant}"
-                package = importlib.import_module(package_name)
+            # Yield the module itself if it's not skippable
+            basename = module.__name__.split(".")[-1]
+            if not _should_skip_module(basename):
+                yield module
 
-                # Yield package's __init__.py if it has classes
-                if not self._should_skip_module(package):
-                    yield package
-
-                # Recursively scan submodules
-                yield from self._scan_package_recursive(package)
-            except (ImportError, ModuleNotFoundError):
-                pass  # Neither module nor package exists
+            # If it's a package, recursively scan submodules
+            if hasattr(module, "__path__"):
+                yield from self._scan_package_recursive(module)
 
     def scan_all_modules(self) -> Iterable[ModuleType]:
         """Scan all non-private modules in the package recursively.
@@ -103,7 +138,9 @@ class ModuleScanner:
         yield self.root_module
         yield from self._scan_package_recursive(self.root_module)
 
-    def _scan_package_recursive(self, package: ModuleType) -> Iterable[ModuleType]:
+    def _scan_package_recursive(
+        self, package: ModuleType
+    ) -> Iterable[ModuleType]:
         """Recursively scan a package for all submodules.
 
         Args:
@@ -113,53 +150,36 @@ class ModuleScanner:
             ModuleType: Discovered modules
         """
         if not hasattr(package, "__path__"):
-            return  # Not a package
+            return
 
         for _importer, modname, is_pkg in pkgutil.iter_modules(
             package.__path__, prefix=f"{package.__name__}."
         ):
-            # Skip test and private modules
             basename = modname.split(".")[-1]
-            if basename.startswith("test_") or (
-                basename.startswith("_") and basename != "__init__"
-            ):
+            if _should_skip_module(basename):
                 continue
 
             try:
                 module = importlib.import_module(modname)
                 yield module
 
-                # Recursively scan if it's a package
                 if is_pkg:
                     yield from self._scan_package_recursive(module)
             except ImportError as e:
-                # Fail fast on import errors
-                raise ImportError(
-                    f"Failed to import module {modname} while scanning {package.__name__}. "
-                    f"Error: {e}"
-                ) from e
-
-    @staticmethod
-    def _should_skip_module(module: ModuleType) -> bool:
-        """Check if a module should be skipped during scanning.
-
-        Args:
-            module: Module to check
-
-        Returns:
-            True if module should be skipped
-        """
-        module_name = module.__name__.split(".")[-1]
-        return module_name.startswith("test_") or (
-            module_name.startswith("_") and module_name != "__init__"
-        )
+                msg = (
+                    f"Failed to import module {modname} "
+                    f"while scanning {package.__name__}. Error: {e}"
+                )
+                raise ImportError(msg) from e
 
 
 class ClassScanner:
     """Extract classes from modules by type."""
 
     @staticmethod
-    def find_subclasses(module: ModuleType, base_class: type[T]) -> Iterable[type[T]]:
+    def find_subclasses(
+        module: ModuleType, base_class: type[T]
+    ) -> Iterable[type[T]]:
         """Find all subclasses of base_class in module.
 
         Filters out:
@@ -177,33 +197,15 @@ class ClassScanner:
 
         Examples:
             >>> module = importlib.import_module("myapp.aggregates")
-            >>> for cls in ClassScanner.find_subclasses(module, Aggregate):
+            >>> classes = ClassScanner.find_subclasses(module, Aggregate)
+            >>> for cls in classes:
             ...     print(cls.__name__)
             BankAccount
             ShoppingCart
         """
         for name, obj in inspect.getmembers(module, inspect.isclass):
-            # Skip if not a subclass
-            if not issubclass(obj, base_class):
-                continue
-
-            # Skip the base class itself
-            if obj is base_class:
-                continue
-
-            # Skip private classes
-            if name.startswith("_"):
-                continue
-
-            # Skip abstract classes
-            if inspect.isabstract(obj):
-                continue
-
-            # Skip classes imported from other modules
-            if obj.__module__ != module.__name__:
-                continue
-
-            yield obj
+            if _should_include_subclass(obj, name, base_class, module):
+                yield obj
 
     @staticmethod
     def find_all_classes(module: ModuleType) -> Iterable[type]:
@@ -227,19 +229,12 @@ class ClassScanner:
             EmailService
         """
         for name, obj in inspect.getmembers(module, inspect.isclass):
-            # Skip private classes
-            if name.startswith("_"):
-                continue
-
-            # Skip classes imported from other modules
-            if obj.__module__ != module.__name__:
-                continue
-
-            yield obj
+            if _should_include_class(obj, name, module):
+                yield obj
 
     @staticmethod
     def get_registration_type(cls: type) -> type:
-        """Determine the type to register a class as for dependency injection.
+        """Get the type to register a class as for dependency injection.
 
         Strategy:
         1. Find first ABC or Protocol parent class (interface)
@@ -268,12 +263,55 @@ class ClassScanner:
             <class 'ConcreteService'>
         """
         # Get all base classes (excluding object)
-        bases = [base for base in inspect.getmro(cls) if base not in (cls, object)]
+        bases = [
+            base for base in inspect.getmro(cls)
+            if base not in (cls, object)
+        ]
 
         # Find first ABC or Protocol
         for base in bases:
-            if inspect.isabstract(base) or getattr(base, "_is_protocol", False):
+            if (
+                inspect.isabstract(base)
+                or getattr(base, "_is_protocol", False)
+            ):
                 return base
 
         # No interface found, use concrete type
         return cls
+
+
+def _should_include_class(cls: type, name: str, module: ModuleType) -> bool:
+    """Check if a class should be included in results.
+
+    Args:
+        cls: Class to check
+        name: Name of the class
+        module: Module being scanned
+
+    Returns:
+        True if class should be included
+    """
+    return not name.startswith("_") and cls.__module__ == module.__name__
+
+
+def _should_include_subclass(
+    cls: type, name: str, base_class: type, module: ModuleType
+) -> bool:
+    """Check if a subclass should be included in results.
+
+    Args:
+        cls: Class to check
+        name: Name of the class
+        base_class: Base class being searched for
+        module: Module being scanned
+
+    Returns:
+        True if subclass should be included
+    """
+    return (
+        issubclass(cls, base_class)
+        and cls is not base_class
+        and not name.startswith("_")
+        and not inspect.isabstract(cls)
+        and cls.__module__ == module.__name__
+    )
