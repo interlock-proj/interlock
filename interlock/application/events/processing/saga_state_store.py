@@ -38,11 +38,6 @@ class SagaStateStore(ABC):
         """Create in-memory state store for development/testing."""
         return InMemorySagaStateStore()
 
-    @staticmethod
-    def null() -> "SagaStateStore":
-        """Create null state store that doesn't persist anything."""
-        return NullSagaStateStore()
-
     @abstractmethod
     async def load(self, saga_id: str) -> BaseModel | None:
         """Load saga state by ID.
@@ -102,30 +97,6 @@ class SagaStateStore(ABC):
             True if step is complete, False otherwise
         """
         pass
-
-
-class NullSagaStateStore(SagaStateStore):
-    """Null state store that doesn't persist anything.
-
-    Useful for stateless sagas or testing scenarios where
-    state persistence isn't needed.
-    """
-
-    async def load(self, saga_id: str) -> BaseModel | None:
-        return None
-
-    async def save(self, saga_id: str, state: BaseModel) -> None:
-        pass
-
-    async def delete(self, saga_id: str) -> None:
-        pass
-
-    async def mark_step_complete(self, saga_id: str, step_name: str) -> bool:
-        # Always return True (treat as newly completed)
-        return True
-
-    async def is_step_complete(self, saga_id: str, step_name: str) -> bool:
-        return False
 
 
 class InMemorySagaStateStore(SagaStateStore):

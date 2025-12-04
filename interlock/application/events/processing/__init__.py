@@ -17,7 +17,7 @@ from .executor import EventProcessorExecutor
 from .processor import EventProcessor
 from .projectors import AggregateProjector
 from .saga import Saga, saga_step
-from .saga_state_store import InMemorySagaStateStore, NullSagaStateStore, SagaStateStore
+from .saga_state_store import InMemorySagaStateStore, SagaStateStore
 from .strategies import (
     CatchupResult,
     CatchupStrategy,
@@ -35,7 +35,6 @@ __all__ = [
     "saga_step",
     "SagaStateStore",
     "InMemorySagaStateStore",
-    "NullSagaStateStore",
     # Catchup strategies
     "CatchupStrategy",
     "CatchupResult",

@@ -105,11 +105,16 @@ class AggregateRepository(Generic[A]):
         # We only need to save the aggregate if it has changed in some way.
         if aggregate.changed_since(original_version):
             await self._save_aggregate(aggregate, original_version)
+        else:
+            # High-read scenario: aggregate was loaded but not modified.
+            # Cache it to speed up future reads.
+            if self.cache_strategy.should_cache(aggregate):
+                await self.cache_backend.set_aggregate(aggregate)
 
     async def _load_aggregate(self, aggregate_id: ULID) -> A:
         # (Low Cost) First, we will check the cache to see if the
         # aggregate is already loaded.
-        if cached := self.cache_backend.get_aggregate(aggregate_id):
+        if cached := await self.cache_backend.get_aggregate(aggregate_id):
             return cached  # type: ignore[return-value]
 
         # (Medium Cost) Second, we will check the snapshot store to see if we have a snapshot.
@@ -135,15 +140,8 @@ class AggregateRepository(Generic[A]):
         return aggregate
 
     async def _save_aggregate(self, aggregate: A, expected_version: int) -> None:
-        # If there are no uncommitted events, we likely don't need to do anything.
-        # This can happen if the aggregate was loaded from a snapshot and no events
-        # were created by the handling of a command.
-        # However, we may choose to cache the aggregate in this case as its a
-        # high read scenario likely of some form.
-        if not (uncommitted_events := aggregate.get_uncommitted_events()):
-            if self.cache_strategy.should_cache(aggregate):
-                self.cache_backend.set_aggregate(aggregate)
-            return
+        # Get uncommitted events to publish
+        uncommitted_events = aggregate.get_uncommitted_events()
 
         # Publish the events to the event bus. If the publish fails due to a concurrency
         # exception, the write has failed due to a race on the aggregate.
@@ -154,7 +152,7 @@ class AggregateRepository(Generic[A]):
             await self.event_bus.publish_events(uncommitted_events, expected_version)
             aggregate.clear_uncommitted_events()
         except ConcurrencyError:
-            self.cache_backend.remove_aggregate(aggregate.id)
+            await self.cache_backend.remove_aggregate(aggregate.id)
             raise
 
         # If we have succeeded in snapshotting and publishing the events, we can

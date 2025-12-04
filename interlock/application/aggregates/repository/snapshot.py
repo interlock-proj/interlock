@@ -16,7 +16,7 @@ class AggregateSnapshotStrategy(ABC):
 
     @abstractmethod
     def should_snapshot(self, aggregate: "Aggregate") -> bool:
-        pass
+        ...
 
 
 class AggregateSnapshotStorageBackend(ABC):
@@ -41,7 +41,7 @@ class AggregateSnapshotStorageBackend(ABC):
         Returns:
             None
         """
-        pass
+        ...
 
     @abstractmethod
     async def load_snapshot(
@@ -71,7 +71,7 @@ class AggregateSnapshotStorageBackend(ABC):
         Returns:
             Optional[Aggregate]: The aggregate snapshot if it exists, None otherwise.
         """
-        pass
+        ...
 
     @abstractmethod
     async def list_aggregate_ids_by_type(
@@ -94,7 +94,7 @@ class AggregateSnapshotStorageBackend(ABC):
             >>> user_ids = await snapshot_backend.list_aggregate_ids_by_type(User)
             >>> # [ULID('...'), ULID('...'), ...]
         """
-        pass
+        ...
 
 
 class NeverSnapshot(AggregateSnapshotStrategy):

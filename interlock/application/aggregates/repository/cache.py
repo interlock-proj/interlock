@@ -10,8 +10,9 @@ if TYPE_CHECKING:
 class AggregateCacheBackend(ABC):
     """Mechanism for caching aggregates.
 
-    A cache backend is resposible for store and retrieve aggregates from a cache and
-    can
+    A cache backend is resposible for store and retrieve aggregates from a
+    cache. All operations are async to support I/O-bound cache backends like
+    Redis or Memcached.
     """
 
     @staticmethod
@@ -19,16 +20,18 @@ class AggregateCacheBackend(ABC):
         return NullAggregateCacheBackend()
 
     @abstractmethod
-    def get_aggregate(self, aggregate_id: ULID) -> Optional["Aggregate"]:
-        pass
+    async def get_aggregate(
+        self, aggregate_id: ULID
+    ) -> Optional["Aggregate"]:
+        ...
 
     @abstractmethod
-    def set_aggregate(self, aggregate: "Aggregate") -> None:
-        pass
+    async def set_aggregate(self, aggregate: "Aggregate") -> None:
+        ...
 
     @abstractmethod
-    def remove_aggregate(self, aggregate_id: ULID) -> None:
-        pass
+    async def remove_aggregate(self, aggregate_id: ULID) -> None:
+        ...
 
 
 class CacheStrategy(ABC):
@@ -38,17 +41,17 @@ class CacheStrategy(ABC):
 
     @abstractmethod
     def should_cache(self, aggregate: "Aggregate") -> bool:
-        pass
+        ...
 
 
 class NullAggregateCacheBackend(AggregateCacheBackend):
-    def get_aggregate(self, _: ULID) -> Optional["Aggregate"]:
+    async def get_aggregate(self, _: ULID) -> Optional["Aggregate"]:
         return None
 
-    def set_aggregate(self, _: "Aggregate") -> None:
+    async def set_aggregate(self, _: "Aggregate") -> None:
         pass
 
-    def remove_aggregate(self, _: ULID) -> None:
+    async def remove_aggregate(self, _: ULID) -> None:
         pass
 
 
