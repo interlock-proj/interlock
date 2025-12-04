@@ -69,7 +69,6 @@ class EventProcessorExecutor(Generic[P]):
     """
 
     __slots__ = (
-        "subscription",
         "processor",
         "condition",
         "strategy",
@@ -81,11 +80,11 @@ class EventProcessorExecutor(Generic[P]):
         processor: P,
         condition: CatchupCondition,
         strategy: CatchupStrategy[P],
+        batch_size: int = 1000,
     ) -> None:
         """Initialize the executor with its dependencies.
 
         Args:
-            subscription: Event stream to consume from
             processor: Processor with event handlers
             condition: When to trigger catchup
             strategy: How to catch up when triggered
@@ -94,10 +93,12 @@ class EventProcessorExecutor(Generic[P]):
         Raises:
             ValueError: If batch_size <= 0
         """
+        if batch_size <= 0:
+            raise ValueError("batch_size must be positive")
         self.processor = processor
         self.condition = condition
         self.strategy = strategy
-        self.batch_size = 1000
+        self.batch_size = batch_size
 
     async def process_event_batch(
         self,
@@ -113,8 +114,8 @@ class EventProcessorExecutor(Generic[P]):
         to avoid double-processing events that were already incorporated during
         catchup.
 
-        For each event, the execution context is restored from the event metadata
-        before processing, allowing processors to:
+        For each event, the execution context is restored from the event
+        metadata before processing, allowing processors to:
         - Access correlation/causation IDs for logging
         - Dispatch new commands with proper context inheritance
         - Track the causal chain in sagas and process managers
@@ -148,6 +149,7 @@ class EventProcessorExecutor(Generic[P]):
             # Restore context from event metadata before processing
             # This allows event processors to dispatch commands with proper
             # causation
+            context_set = False
             if event.correlation_id is not None:
                 ctx = ExecutionContext(
                     correlation_id=event.correlation_id,
@@ -155,18 +157,65 @@ class EventProcessorExecutor(Generic[P]):
                     command_id=None,
                 )
                 set_context(ctx)
+                context_set = True
 
             try:
                 await self.processor.handle(event.data)
             finally:
-                # Always clear context after processing to prevent leakage
-                clear_context()
+                # Clear context only if we set it to prevent leakage
+                if context_set:
+                    clear_context()
 
         # If we didn't process any events, avoid division by zero
         if events_processed == 0:
             return timedelta()
 
-        return total_lag_time / self.batch_size
+        return total_lag_time / events_processed
+
+    async def process_batch_and_check_catchup(
+        self,
+        subscription: EventSubscription,
+        catchup_result: CatchupResult | None = None,
+    ) -> CatchupResult | None:
+        """Process a batch, measure lag, and trigger catchup if needed.
+
+        This method encapsulates one iteration of the main event loop:
+        1. Process a batch of events
+        2. Measure lag (average age + unprocessed count)
+        3. Clear skip window after first batch post-catchup
+        4. Trigger catchup if condition is met
+
+        Args:
+            subscription: Event subscription to pull from
+            catchup_result: Skip window from previous catchup (if any)
+
+        Returns:
+            New catchup result if catchup was triggered, None otherwise
+
+        Raises:
+            StopAsyncIteration: If subscription ends
+            Any exceptions from event handlers or catchup strategy
+        """
+        # Process batch and measure lag
+        average_event_age = await self.process_event_batch(
+            subscription=subscription,
+            catchup_result=catchup_result,
+        )
+        lag = Lag(
+            average_event_age=average_event_age,
+            unprocessed_events=await subscription.depth(),
+        )
+
+        # Clear skip window after first batch (one-time use)
+        # The skip window prevents double-processing events that were
+        # already incorporated during the catchup operation
+        new_catchup_result = None
+
+        # Trigger catchup if condition met
+        if self.condition.should_catchup(lag):
+            new_catchup_result = await self.strategy.catchup(self.processor)
+
+        return new_catchup_result
 
     async def run(self, subscription: EventSubscription) -> None:
         """Run the event processing loop continuously.
@@ -190,23 +239,7 @@ class EventProcessorExecutor(Generic[P]):
         catchup_result = await self.strategy.catchup(self.processor)
 
         while True:
-            # Process batch and measure lag
-            average_event_age = await self.process_event_batch(
+            catchup_result = await self.process_batch_and_check_catchup(
                 subscription=subscription,
                 catchup_result=catchup_result,
             )
-            lag = Lag(
-                average_event_age=average_event_age,
-                unprocessed_events=await subscription.depth(),
-            )
-
-            # Clear skip window if we've processed an event beyond it
-            # (The skip window is a one-time thing after catchup)
-            if catchup_result is not None:
-                # Skip window is cleared implicitly by process_event_batch.
-                # Once we process events beyond skip_before, we're caught up.
-                catchup_result = None
-
-            # Trigger catchup if condition met
-            if self.condition.should_catchup(lag):
-                catchup_result = await self.strategy.catchup(self.processor)

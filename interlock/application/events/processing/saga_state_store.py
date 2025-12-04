@@ -48,7 +48,7 @@ class SagaStateStore(ABC):
         Returns:
             The saga state if found, None otherwise
         """
-        pass
+        ...
 
     @abstractmethod
     async def save(self, saga_id: str, state: BaseModel) -> None:
@@ -58,7 +58,7 @@ class SagaStateStore(ABC):
             saga_id: Unique identifier for the saga instance
             state: The state to save (any Pydantic BaseModel)
         """
-        pass
+        ...
 
     @abstractmethod
     async def delete(self, saga_id: str) -> None:
@@ -67,7 +67,7 @@ class SagaStateStore(ABC):
         Args:
             saga_id: Unique identifier for the saga instance
         """
-        pass
+        ...
 
     @abstractmethod
     async def mark_step_complete(self, saga_id: str, step_name: str) -> bool:
@@ -83,7 +83,7 @@ class SagaStateStore(ABC):
         Returns:
             True if newly marked, False if already complete
         """
-        pass
+        ...
 
     @abstractmethod
     async def is_step_complete(self, saga_id: str, step_name: str) -> bool:
@@ -96,7 +96,7 @@ class SagaStateStore(ABC):
         Returns:
             True if step is complete, False otherwise
         """
-        pass
+        ...
 
 
 class InMemorySagaStateStore(SagaStateStore):
