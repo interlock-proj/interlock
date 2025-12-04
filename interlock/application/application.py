@@ -40,6 +40,7 @@ from .events import (
     UpcasterMap,
 )
 from .container import DependencyContainer, ContextualBinding
+from .events.processing.saga_state_store import SagaStateStore
 
 T = TypeVar("T")
 
@@ -273,6 +274,8 @@ class ApplicationBuilder:
             dependency_type=CommandBus,
             factory=self._build_command_bus,
         )
+
+        self.container.register_singleton(SagaStateStore, SagaStateStore.in_memory)
 
     def register_dependency(
         self,

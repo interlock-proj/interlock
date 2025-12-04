@@ -45,35 +45,28 @@ class CheckoutSaga(Saga[CheckoutState]):
         super().__init__(state_store)
         self.dispatched_commands = []
 
-    @handles_event
-    @saga_step("initiate_checkout")
-    async def on_checkout_initiated(self, event: CheckoutInitiated) -> None:
-        state = CheckoutState(order_id=event.saga_id, status="started")
-        await self.set_state(event.saga_id, state)
+    @saga_step
+    async def on_checkout_initiated(self, event: CheckoutInitiated) -> CheckoutState:
         self.dispatched_commands.append("ReserveInventory")
+        return CheckoutState(order_id=event.saga_id, status="started")
 
-    @handles_event
-    @saga_step("reserve_inventory", saga_id=lambda e: e.order_id)
-    async def on_inventory_reserved(self, event: InventoryReserved) -> None:
-        state = await self.get_state(event.order_id)
+    @saga_step(step_name="reserve_inventory", saga_id=lambda e: e.order_id)
+    async def on_inventory_reserved(self, event: InventoryReserved, state: CheckoutState) -> CheckoutState:
         state.inventory_reserved = True
         state.status = "inventory_reserved"
-        await self.set_state(event.order_id, state)
         self.dispatched_commands.append("ChargePayment")
+        return state
 
-    @handles_event
-    @saga_step("charge_payment", saga_id=lambda e: e.order_id)
-    async def on_payment_charged(self, event: PaymentCharged) -> None:
-        state = await self.get_state(event.order_id)
+    @saga_step(step_name="charge_payment", saga_id=lambda e: e.order_id)
+    async def on_payment_charged(self, event: PaymentCharged, state: CheckoutState) -> CheckoutState:
         state.payment_charged = True
         state.status = "payment_charged"
-        await self.set_state(event.order_id, state)
         self.dispatched_commands.append("CompleteOrder")
+        return state
 
-    @handles_event
-    @saga_step("complete_order")
-    async def on_order_completed(self, event: OrderCompleted) -> None:
-        await self.delete_state(event.saga_id)
+    @saga_step(step_name="complete_order")
+    async def on_order_completed(self, event: OrderCompleted, state: CheckoutState) -> None:
+        return None  # Delete state
 
 
 @pytest.mark.asyncio
@@ -136,7 +129,7 @@ async def test_saga_state_management():
     event1 = CheckoutInitiated(saga_id="order-1", customer_id="customer-1")
     await saga.on_checkout_initiated(event1)
 
-    state = await saga.get_state("order-1")
+    state = await store.load("order-1")
     assert state is not None
     assert state.order_id == "order-1"
     assert state.status == "started"
@@ -145,7 +138,7 @@ async def test_saga_state_management():
     event2 = InventoryReserved(order_id="order-1", items=["item-1"])
     await saga.on_inventory_reserved(event2)
 
-    state = await saga.get_state("order-1")
+    state = await store.load("order-1")
     assert state.inventory_reserved is True
     assert state.status == "inventory_reserved"
 
@@ -178,7 +171,7 @@ async def test_saga_step_with_custom_extractor():
     event2 = InventoryReserved(order_id="order-1", items=["item-1"])
     await saga.on_inventory_reserved(event2)
 
-    state = await saga.get_state("order-1")
+    state = await store.load("order-1")
     assert state.inventory_reserved is True
 
     await saga.on_inventory_reserved(event2)
@@ -196,10 +189,9 @@ async def test_saga_step_missing_saga_id_raises_error():
         def __init__(self, state_store: SagaStateStore):
             super().__init__(state_store)
 
-        @handles_event
-        @saga_step("test_step")
-        async def on_event(self, event: EventWithoutSagaId) -> None:
-            pass
+        @saga_step(step_name="test_step")
+        async def on_event(self, event: EventWithoutSagaId) -> CheckoutState:
+            return CheckoutState(order_id="test", status="test")
 
     store = InMemorySagaStateStore()
     saga = TestSaga(store)
@@ -219,12 +211,12 @@ async def test_saga_delete_state():
     event1 = CheckoutInitiated(saga_id="order-1", customer_id="customer-1")
     await saga.on_checkout_initiated(event1)
 
-    assert await saga.get_state("order-1") is not None
+    assert await store.load("order-1") is not None
 
     event2 = OrderCompleted(saga_id="order-1")
     await saga.on_order_completed(event2)
 
-    assert await saga.get_state("order-1") is None
+    assert await store.load("order-1") is None
 
 
 @pytest.mark.asyncio
@@ -236,14 +228,14 @@ async def test_saga_full_workflow():
     event1 = CheckoutInitiated(saga_id="order-1", customer_id="customer-1")
     await saga.on_checkout_initiated(event1)
 
-    state = await saga.get_state("order-1")
+    state = await store.load("order-1")
     assert state.status == "started"
     assert "ReserveInventory" in saga.dispatched_commands
 
     event2 = InventoryReserved(order_id="order-1", items=["item-1"])
     await saga.on_inventory_reserved(event2)
 
-    state = await saga.get_state("order-1")
+    state = await store.load("order-1")
     assert state.status == "inventory_reserved"
     assert state.inventory_reserved is True
     assert "ChargePayment" in saga.dispatched_commands
@@ -251,7 +243,7 @@ async def test_saga_full_workflow():
     event3 = PaymentCharged(order_id="order-1", transaction_id="txn-123")
     await saga.on_payment_charged(event3)
 
-    state = await saga.get_state("order-1")
+    state = await store.load("order-1")
     assert state.status == "payment_charged"
     assert state.payment_charged is True
     assert "CompleteOrder" in saga.dispatched_commands
@@ -259,7 +251,7 @@ async def test_saga_full_workflow():
     event4 = OrderCompleted(saga_id="order-1")
     await saga.on_order_completed(event4)
 
-    state = await saga.get_state("order-1")
+    state = await store.load("order-1")
     assert state is None
 
 
@@ -271,9 +263,8 @@ async def test_saga_step_exception_handling():
         def __init__(self, state_store: SagaStateStore):
             super().__init__(state_store)
 
-        @handles_event
-        @saga_step("failing_step")
-        async def on_event(self, event: CheckoutInitiated) -> None:
+        @saga_step
+        async def on_event(self, event: CheckoutInitiated) -> CheckoutState:
             raise RuntimeError("Step failed")
 
     store = InMemorySagaStateStore()
@@ -284,4 +275,4 @@ async def test_saga_step_exception_handling():
     with pytest.raises(RuntimeError, match="Step failed"):
         await saga.on_event(event)
 
-    assert await store.is_step_complete("order-1", "failing_step") is False
+    assert await store.is_step_complete("order-1", "on_event") is False

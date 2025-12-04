@@ -1,14 +1,17 @@
 """Base saga class with state management and step idempotency."""
 
+import inspect
 import logging
+from abc import ABC, abstractmethod
 from collections.abc import Callable
 from functools import wraps
-from typing import Any, Generic, TypeVar
+from typing import Any, Generic, Type, TypeVar
 
 from pydantic import BaseModel
 
 from .processor import EventProcessor
 from .saga_state_store import SagaStateStore
+from ....routing import handles_event
 
 TState = TypeVar("TState", bound=BaseModel)
 TEvent = TypeVar("TEvent", bound=BaseModel)
@@ -21,6 +24,7 @@ class Saga(EventProcessor, Generic[TState]):
     - Automatic state persistence via SagaStateStore
     - Step-level idempotency tracking
     - Type-safe state access through generics
+    - Automatic event routing via @saga_step decorator
 
     Sagas coordinate long-running business processes that span multiple
     aggregates. They handle compensation (rollback) when steps fail and
@@ -29,38 +33,59 @@ class Saga(EventProcessor, Generic[TState]):
     The Saga class is generic over TState for type safety, but the
     underlying SagaStateStore works with any BaseModel (like EventStore).
 
+    **Handler Patterns:**
+    - First step: Returns initial state
+    - Subsequent steps: Receives and returns modified state
+    - Cleanup steps: Returns None to delete state
+
     Example:
-        >>> from interlock.events.processing import Saga, saga_step, SagaStateStore
-        >>> from interlock.routing import handles_event
+        >>> from interlock.application.events import (
+        ...     Saga, saga_step, SagaStateStore
+        ... )
         >>> from pydantic import BaseModel
         >>>
         >>> class CheckoutState(BaseModel):
         ...     order_id: str
         ...     status: str
         ...     inventory_reserved: bool = False
+        ...     payment_charged: bool = False
         >>>
         >>> class CheckoutSaga(Saga[CheckoutState]):
-        ...     def __init__(self, app: Application, state_store: SagaStateStore):
+        ...     def __init__(self, state_store: SagaStateStore):
         ...         super().__init__(state_store)
-        ...         self.app = app
         ...
-        ...     @handles_event
-        ...     @saga_step("initiate_checkout")
-        ...     async def handle(self, event: CheckoutInitiated) -> None:
-        ...         # Event must have saga_id field (convention)
-        ...         state = CheckoutState(order_id=event.saga_id, status="started")
-        ...         await self.set_state(event.saga_id, state)
-        ...         await self.app.dispatch(ReserveInventory(...))
+        ...     @saga_step  # Step name auto-inferred from function name
+        ...     async def on_checkout_initiated(
+        ...         self, event: CheckoutInitiated
+        ...     ) -> CheckoutState:
+        ...         # First step - return initial state
+        ...         return CheckoutState(
+        ...             order_id=event.saga_id, status="started"
+        ...         )
         ...
-        ...     @handles_event
-        ...     @saga_step("reserve_inventory", saga_id=lambda e: e.order_id)
-        ...     async def handle(self, event: InventoryReserved) -> None:
-        ...         # Custom extractor for events without saga_id field
-        ...         # Lambda is type-safe: e is InventoryReserved
-        ...         state = await self.get_state(event.order_id)
+        ...     @saga_step(saga_id=lambda e: e.order_id)
+        ...     async def on_inventory_reserved(
+        ...         self, event: InventoryReserved, state: CheckoutState
+        ...     ) -> CheckoutState:
+        ...         # Subsequent step - modify and return state
         ...         state.inventory_reserved = True
-        ...         await self.set_state(event.order_id, state)
-        ...         await self.app.dispatch(ChargePayment(...))
+        ...         state.status = "inventory_reserved"
+        ...         return state
+        ...
+        ...     @saga_step(saga_id=lambda e: e.order_id)
+        ...     async def on_payment_charged(
+        ...         self, event: PaymentCharged, state: CheckoutState
+        ...     ) -> CheckoutState:
+        ...         state.payment_charged = True
+        ...         state.status = "completed"
+        ...         return state
+        ...
+        ...     @saga_step
+        ...     async def on_order_cancelled(
+        ...         self, event: OrderCancelled, state: CheckoutState
+        ...     ) -> None:
+        ...         # Cleanup - return None to delete state
+        ...         return None
 
     Usage with ApplicationBuilder:
         >>> # Saga is just an EventProcessor - no special handling needed!
@@ -78,161 +103,210 @@ class Saga(EventProcessor, Generic[TState]):
         """
         super().__init__()
         self.state_store = state_store
+
+
+class SagaStepExecutor(ABC):
+    """Base class for executing saga steps with idempotency."""
+
+    @staticmethod
+    def executor_from_function(
+        function: Callable[..., Any],
+    ) -> Type["SagaStepExecutor"]:
+        params = list(inspect.signature(function).parameters.values())
+        expects_state = len(params) >= 3  # self, event, state
+        return SubsequentStepExecutor if expects_state else InitialStepExecutor
+
+    def __init__(
+        self,
+        step_name: str,
+        saga_id_extractor: Callable[[BaseModel], str] | None,
+        handler_func: Callable[..., Any],
+    ):
+        self.step_name = step_name
+        self.saga_id_extractor = saga_id_extractor
+        self.handler_func = handler_func
         self.logger = logging.getLogger(self.__class__.__name__)
 
-    async def get_state(self, saga_id: str) -> TState | None:
-        """Load saga state from storage.
+    def extract_saga_id(self, event: BaseModel) -> str:
+        """Extract saga_id from event using extractor or convention."""
+        if self.saga_id_extractor is not None:
+            return self.saga_id_extractor(event)  # type: ignore
 
-        Args:
-            saga_id: Unique identifier for the saga instance
+        saga_id = getattr(event, "saga_id", None)
+        if saga_id is None:
+            raise ValueError(
+                f"Event {type(event).__name__} must have "
+                f"'saga_id' field, or provide a custom extractor: "
+                f"@saga_step(saga_id=lambda e: e.your_field)"
+            )
+        return saga_id
 
-        Returns:
-            The saga state if found, None otherwise
-        """
-        state = await self.state_store.load(saga_id)
-        return state  # type: ignore[return-value]
+    async def check_idempotency(self, saga: Saga[Any], saga_id: str) -> bool:
+        """Check if step is already complete. Returns True if should skip."""
+        if await saga.state_store.is_step_complete(saga_id, self.step_name):
+            self.logger.info(
+                f"Step '{self.step_name}' already complete for saga "
+                f"{saga_id}, skipping"
+            )
+            return True
+        return False
 
-    async def set_state(self, saga_id: str, state: TState) -> None:
-        """Save saga state to storage.
+    async def persist_state(self, saga: Saga[Any], saga_id: str, result: Any) -> None:
+        """Persist state based on handler return value."""
+        if result is None:
+            await saga.state_store.delete(saga_id)
+        elif isinstance(result, BaseModel):
+            await saga.state_store.save(saga_id, result)
+        # else: void return, no state change
 
-        Args:
-            saga_id: Unique identifier for the saga instance
-            state: The state to save
-        """
-        await self.state_store.save(saga_id, state)
+    async def mark_step_completed(self, saga: Saga[Any], saga_id: str) -> None:
+        """Mark step as complete and log."""
+        await saga.state_store.mark_step_complete(saga_id, self.step_name)
+        self.logger.info(f"Step '{self.step_name}' completed for saga {saga_id}")
 
-    async def delete_state(self, saga_id: str) -> None:
-        """Delete saga state (cleanup after completion).
+    @abstractmethod
+    async def execute_handler(
+        self, saga: Saga[Any], event: BaseModel, saga_id: str
+    ) -> Any:
+        """Execute the handler function with appropriate parameters."""
+        ...
 
-        Args:
-            saga_id: Unique identifier for the saga instance
-        """
-        await self.state_store.delete(saga_id)
+    async def execute(self, saga: Saga[Any], event: BaseModel) -> Any:
+        """Execute complete saga step with idempotency and state management."""
+        saga_id = self.extract_saga_id(event)
+        try:
+            if await self.check_idempotency(saga, saga_id):
+                return None
+            result = await self.execute_handler(saga, event, saga_id)
+            await self.mark_step_completed(saga, saga_id)
+            await self.persist_state(saga, saga_id, result)
+            return result
+        except Exception as e:
+            self.logger.error(f"Step '{self.step_name}' failed for saga {saga_id}: {e}")
+            raise e
 
-    async def is_step_complete(self, saga_id: str, step_name: str) -> bool:
-        """Check if a saga step has been completed.
 
-        Args:
-            saga_id: Unique identifier for the saga instance
-            step_name: Name of the step to check
+class InitialStepExecutor(SagaStepExecutor):
+    """Executor for initial saga steps that don't expect existing state."""
 
-        Returns:
-            True if step is complete, False otherwise
-        """
-        return await self.state_store.is_step_complete(saga_id, step_name)
+    async def execute_handler(
+        self, saga: Saga[Any], event: BaseModel, saga_id: str
+    ) -> Any:
+        """Execute handler without state parameter."""
+        return await self.handler_func(saga, event)
 
-    async def mark_step_complete(self, saga_id: str, step_name: str) -> bool:
-        """Mark a saga step as complete.
 
-        Args:
-            saga_id: Unique identifier for the saga instance
-            step_name: Name of the step to mark complete
+class SubsequentStepExecutor(SagaStepExecutor):
+    """Executor for subsequent saga steps that expect existing state."""
 
-        Returns:
-            True if newly marked, False if already complete
-        """
-        return await self.state_store.mark_step_complete(saga_id, step_name)
+    async def execute_handler(
+        self, saga: Saga[Any], event: BaseModel, saga_id: str
+    ) -> Any:
+        """Execute handler with state parameter."""
+        state = await saga.state_store.load(saga_id)
+        if state is None:
+            raise ValueError(
+                f"State not found for saga {saga_id}. "
+                f"Handler {self.handler_func.__name__} expects state "
+                f"parameter but no state exists."
+            )
+        return await self.handler_func(saga, event, state)
 
 
 def saga_step(
-    step_name: str, saga_id: Callable[[TEvent], str] | None = None
+    f: Callable[..., Any] | None = None,
+    *,
+    step_name: str | None = None,
+    saga_id: Callable[[TEvent], str] | None = None,
 ) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
-    """Decorator for saga steps providing automatic idempotency.
+    """Decorator for saga steps providing automatic idempotency
+    and state management.
 
-    Ensures each step only executes once per saga instance, even if
-    the event is processed multiple times (e.g., due to retries or
-    message broker redelivery).
+    This decorator automatically:
+    1. Applies @handles_event for event routing
+    2. Infers step name from function name if not provided
+    3. Extracts saga_id from event (using extractor or convention)
+    4. Checks if the step has already been completed (idempotency)
+    5. Loads and passes state to handler if it expects a state parameter
+    6. Persists state changes based on return value
+    7. Marks step as complete
 
-    The decorator:
-    1. Extracts the saga_id from the event (using extractor or convention)
-    2. Checks if the step has already been completed
-    3. If complete, skips execution (idempotency)
-    4. If not complete, executes the step and marks it complete
+    **Handler Signatures:**
+    - First step (no existing state):
+      `async def handler(self, event: Event) -> State`
+      Returns the initial state to be persisted.
+    - Subsequent steps:
+      `async def handler(self, event: Event, state: State) -> State | None`
+      Receives current state, returns updated state or None to delete.
+
+    **State Management:**
+    - Return a BaseModel: State is automatically saved
+    - Return None: State is automatically deleted
+    - No return (void): State is not modified
 
     **Saga ID Extraction:**
     - By default, looks for `event.saga_id` (convention)
     - If `saga_id` extractor is provided, uses that instead
-    - Extractor is a lambda/function that takes the event and returns saga_id
-    - The extractor is fully type-safe - event type is inferred
+    - Extractor is a lambda/function that takes the event and returns
+      saga_id
 
     Args:
-        step_name: Unique name for this step in the saga
+        f: Function being decorated (provided when used as @saga_step)
+        step_name: Unique name for this step. If None, inferred from
+            function name.
         saga_id: Optional function to extract saga_id from event.
-                If None, uses event.saga_id (convention)
+            If None, uses event.saga_id (convention)
 
     Example:
-        Convention (event has saga_id field):
-        >>> class CheckoutInitiated(BaseModel):
-        ...     saga_id: str
-        ...     customer_id: str
-        >>>
-        >>> @handles_event
-        ... @saga_step("initiate_checkout")
-        ... async def handle(self, event: CheckoutInitiated) -> None:
-        ...     # Uses event.saga_id automatically
-        ...     await self.app.dispatch(ReserveInventory(...))
+        No parameters (step name inferred from function name):
+        >>> @saga_step
+        ... async def on_checkout_initiated(
+        ...     self, event: CheckoutInitiated
+        ... ) -> CheckoutState:
+        ...     # Step name is "on_checkout_initiated"
+        ...     return CheckoutState(
+        ...         order_id=event.saga_id, status="started"
+        ...     )
 
-        Custom extractor (event uses different field):
-        >>> class InventoryReserved(BaseModel):
-        ...     order_id: str  # No saga_id field
-        >>>
-        >>> @handles_event
-        ... @saga_step("reserve_inventory", saga_id=lambda e: e.order_id)
-        ... async def handle(self, event: InventoryReserved) -> None:
-        ...     # Uses event.order_id as saga_id
-        ...     # Lambda is type-safe: e is typed as InventoryReserved
-        ...     await self.app.dispatch(ChargePayment(...))
+        With step name:
+        >>> @saga_step(step_name="reserve_inventory")
+        ... async def handle_reservation(
+        ...     self, event: InventoryReserved, state: CheckoutState
+        ... ) -> CheckoutState:
+        ...     state.inventory_reserved = True
+        ...     return state
 
-        Composite saga_id:
-        >>> @handles_event
-        ... @saga_step("process_payment", saga_id=lambda e: f"{e.order_id}-{e.payment_id}")
-        ... async def handle(self, event: PaymentProcessed) -> None:
-        ...     # Full type safety - e is PaymentProcessed
-        ...     # Type checker knows about e.order_id and e.payment_id
-        ...     pass
+        Custom saga_id extractor:
+        >>> @saga_step(saga_id=lambda e: e.order_id)
+        ... async def on_inventory_reserved(
+        ...     self, event: InventoryReserved, state: CheckoutState
+        ... ) -> CheckoutState:
+        ...     state.inventory_reserved = True
+        ...     return state
+
+        Delete state by returning None:
+        >>> @saga_step
+        ... async def on_order_cancelled(
+        ...     self, event: OrderCancelled, state: CheckoutState
+        ... ) -> None:
+        ...     # Cleanup logic here
+        ...     return None  # State is deleted
     """
 
     def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
+        resolved_step_name = step_name or func.__name__
+        variant = SagaStepExecutor.executor_from_function(func)
+        executor = variant(resolved_step_name, saga_id, func)
+
+        @handles_event
         @wraps(func)
         async def wrapper(self: Saga[Any], event: BaseModel) -> Any:
-            # Extract saga_id from event
-            if saga_id is not None:
-                # Use custom extractor (type-safe via TEvent generic)
-                extracted_saga_id = saga_id(event)  # type: ignore[arg-type]
-            else:
-                # Use convention: event.saga_id
-                extracted_saga_id = getattr(event, "saga_id", None)
-                if extracted_saga_id is None:
-                    raise ValueError(
-                        f"Event {type(event).__name__} must have 'saga_id' field, "
-                        f"or provide a custom extractor: "
-                        f"@saga_step('{step_name}', saga_id=lambda e: e.your_field)"
-                    )
-
-            # Check if already complete (idempotency)
-            if await self.is_step_complete(extracted_saga_id, step_name):
-                self.logger.info(
-                    f"Step '{step_name}' already complete for saga {extracted_saga_id}, skipping"
-                )
-                return None
-
-            # Execute step
-            try:
-                result = await func(self, event)
-
-                # Mark complete
-                await self.mark_step_complete(extracted_saga_id, step_name)
-                self.logger.info(
-                    f"Step '{step_name}' completed for saga {extracted_saga_id}"
-                )
-
-                return result
-            except Exception as e:
-                self.logger.error(
-                    f"Step '{step_name}' failed for saga {extracted_saga_id}: {e}"
-                )
-                raise
+            return await executor.execute(self, event)
 
         return wrapper
 
-    return decorator
+    # If no function is provided, that means we were called like
+    # @saga_step(step_name="...") which means we need to return a decorator.
+    # If the function _is_ provided, that means we were called like @saga_step.
+    # So we need to return a decorated function.
+    return decorator if f is None else decorator(f)
