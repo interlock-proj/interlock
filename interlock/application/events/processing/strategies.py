@@ -4,11 +4,8 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Generic, TypeVar
 
 if TYPE_CHECKING:
-    from ...aggregates import AggregateRepository
     from ...events.event import Event
-    from .checkpoint import CheckpointBackend
     from .processor import EventProcessor
-    from .projectors import AggregateProjector
 
 P = TypeVar("P", bound="EventProcessor")
 
@@ -160,8 +157,7 @@ class FromReplayingEvents(CatchupStrategy):
     """Catch up by replaying all historical events from the event store.
 
     This is the conceptually simplest and most straightforward catchup strategy.
-    It replays every event from the beginning (or from a checkpoint) through
-    the event processor.
+    It replays every event from the beginning through the event processor.
 
     **Advantages:**
     - Simple and correct - guarantees all events are processed
@@ -207,153 +203,3 @@ class FromReplayingEvents(CatchupStrategy):
         """
         # TODO: Implement event replay from event store
         return None
-
-
-class FromAggregateSnapshot(CatchupStrategy[P], Generic[P]):
-    """Initialize processor state from aggregate snapshots.
-
-    This strategy loads fully-hydrated aggregates (snapshot + events) and
-    projects their current state into the processor using an AggregateProjector.
-    This is much faster than replaying all historical events.
-
-    The strategy is resumable - it saves checkpoints after processing batches
-    of aggregates, allowing it to resume from the last checkpoint after crashes.
-
-    **Applicable when:**
-    - Read model is derived from aggregate state
-    - Aggregate snapshots are available and maintained
-    - You can write an AggregateProjector to translate aggregate → processor state
-
-    **Advantages:**
-    - Much faster than full event replay
-    - Resumable via checkpoints (crash recovery)
-    - Leverages existing snapshot infrastructure
-    - Type-safe with full generic support
-
-    **Disadvantages:**
-    - Requires snapshot strategy to be configured
-    - Requires writing an AggregateProjector
-    - Only processes current aggregate state (not full event history)
-
-    **Not applicable when:**
-    - Processor needs access to all historical events (use FromReplayingEvents)
-    - No snapshots are maintained
-
-    Type Parameters:
-        A: Aggregate type to load
-        P: Processor type to initialize
-
-    Example:
-        >>> class UserProfileProjector(AggregateProjector[User, UserProfileProcessor]):
-        ...     async def project(self, user: User, processor: UserProfileProcessor):
-        ...         processor.profiles[user.id] = {"name": user.name, "email": user.email}
-        >>>
-        >>> strategy = FromAggregateSnapshot(
-        ...     repository=user_repository,
-        ...     projector=UserProfileProjector(),
-        ...     checkpoint_backend=InMemoryCheckpointBackend()
-        ... )
-        >>>
-        >>> # Executor will call:
-        >>> result = await strategy.catchup(processor)
-        >>> # Processor is now hydrated from all User aggregates
-        >>> # result.skip_before tells executor to skip old events
-    """
-
-    def __init__(
-        self,
-        repository: "AggregateRepository",
-        projector: "AggregateProjector",
-        checkpoint_backend: "CheckpointBackend",
-    ):
-        """Initialize the snapshot-based catchup strategy.
-
-        Args:
-            repository: Repository for loading aggregates of type A
-            projector: Projector to translate aggregate state → processor state
-            checkpoint_backend: Backend for saving/loading checkpoints
-        """
-        self.repository: AggregateRepository = repository
-        self.projector: AggregateProjector = projector
-        self.checkpoint_backend: CheckpointBackend = checkpoint_backend
-
-    def is_blocking(self) -> bool:
-        """Snapshot loading is blocking for consistency.
-
-        Returns:
-            True - processor loads all aggregates before processing new events
-        """
-        return True
-
-    async def catchup(self, processor: P) -> CatchupResult:
-        """Load aggregates from snapshots and project into processor.
-
-        This method:
-        1. Loads checkpoint (if exists) to resume from previous progress
-        2. Gets all aggregate IDs of the repository's type
-        3. Filters out already-processed IDs from checkpoint
-        4. For each remaining aggregate:
-           - Loads it via repository (snapshot + events)
-           - Projects it into processor
-           - Tracks max timestamp
-           - Saves checkpoint every N aggregates
-        5. Returns CatchupResult with skip window
-
-        Args:
-            processor: The event processor to hydrate
-
-        Returns:
-            CatchupResult with skip_before set to the maximum aggregate.last_event_time,
-            allowing the executor to skip events that were already incorporated into
-            the loaded aggregates.
-
-        Raises:
-            Any exceptions from repository.acquire(), projector.project(),
-            or checkpoint_backend operations.
-        """
-        from .checkpoint import Checkpoint
-
-        processor_name = processor.__class__.__name__
-
-        # Load checkpoint to resume from previous progress
-        checkpoint = await self.checkpoint_backend.load_checkpoint(processor_name)
-        if checkpoint is None:
-            checkpoint = Checkpoint(
-                processor_name=processor_name,
-                processed_aggregate_ids=set(),
-                max_timestamp=datetime.min.replace(tzinfo=None),
-                events_processed=0,
-            )
-
-        # Get all aggregate IDs of this type
-        all_ids = await self.repository.list_all_ids()
-
-        # Filter out already processed
-        remaining_ids = [
-            agg_id
-            for agg_id in all_ids
-            if agg_id not in checkpoint.processed_aggregate_ids
-        ]
-
-        # Process each aggregate
-        for agg_id in remaining_ids:
-            # Load fully-hydrated aggregate (snapshot + events)
-            async with self.repository.acquire(agg_id) as aggregate:
-                # Project aggregate state into processor
-                await self.projector.project(aggregate, processor)
-
-                # Track progress in checkpoint
-                if aggregate.last_event_time > checkpoint.max_timestamp:
-                    checkpoint.max_timestamp = aggregate.last_event_time
-                checkpoint.processed_aggregate_ids.add(agg_id)
-                checkpoint.events_processed += aggregate.version
-
-                # Save checkpoint every 100 aggregates for resumability
-                if len(checkpoint.processed_aggregate_ids) % 100 == 0:
-                    await self.checkpoint_backend.save_checkpoint(checkpoint)
-
-        # Save final checkpoint
-        await self.checkpoint_backend.save_checkpoint(checkpoint)
-
-        # Return skip window to avoid double-processing
-        return CatchupResult(skip_before=checkpoint.max_timestamp)

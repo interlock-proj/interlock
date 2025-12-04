@@ -13,19 +13,14 @@ from .delivery import AsynchronousDelivery, EventDelivery, SynchronousDelivery
 from .processing import (
     AfterNAge,
     AfterNEvents,
-    AggregateProjector,
     AllOf,
     AnyOf,
     CatchupCondition,
     CatchupResult,
     CatchupStrategy,
-    Checkpoint,
-    CheckpointBackend,
     EventProcessor,
     EventProcessorExecutor,
-    FromAggregateSnapshot,
     FromReplayingEvents,
-    InMemoryCheckpointBackend,
     InMemorySagaStateStore,
     Never,
     NoCatchup,
@@ -56,7 +51,6 @@ __all__ = [
     # In-memory implementations
     "InMemoryEventStore",
     "InMemoryEventTransport",
-    "InMemoryCheckpointBackend",
     "InMemorySagaStateStore",
     # Event processors
     "EventProcessor",
@@ -65,18 +59,12 @@ __all__ = [
     "CatchupResult",
     "NoCatchup",
     "FromReplayingEvents",
-    "FromAggregateSnapshot",
     "CatchupCondition",
     "Never",
     "AfterNEvents",
     "AfterNAge",
     "AnyOf",
     "AllOf",
-    # Checkpoint infrastructure
-    "Checkpoint",
-    "CheckpointBackend",
-    # Projector infrastructure
-    "AggregateProjector",
     # Saga infrastructure
     "Saga",
     "SagaStateStore",

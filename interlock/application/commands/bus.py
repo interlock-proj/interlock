@@ -55,12 +55,9 @@ class CommandMiddleware:
         # If router returned None (IgnoreHandler), forward to next
         if result is None:
             await next(command)
-        # If it's a coroutine (async interceptor), await it
-        elif hasattr(result, "__await__"):
-            await result
-        # Otherwise it's a sync result, already executed
         else:
-            pass
+            # Router returned coroutine (async interceptor), await it
+            await result
 
 
 class CommandToAggregateMap:
