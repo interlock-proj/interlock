@@ -84,8 +84,6 @@ class MockCatchupStrategy(CatchupStrategy):
         self.catchup_calls = 0
         self.result = result
 
-    def is_blocking(self):
-        return True
 
     async def catchup(self, processor):
         self.catchup_calls += 1

@@ -7,7 +7,6 @@ from ulid import ULID
 from interlock.application.events.processing.processor import EventProcessor
 from interlock.application.events.processing.strategies import (
     CatchupResult,
-    FromReplayingEvents,
     NoCatchup,
 )
 from interlock.domain import Event
@@ -119,15 +118,6 @@ def test_catchup_result_should_skip_boundary_cases():
     assert not result.should_skip(just_after)
 
 
-# NoCatchup Tests
-
-
-def test_no_catchup_is_blocking():
-    """Test NoCatchup.is_blocking returns False."""
-    strategy = NoCatchup()
-    assert strategy.is_blocking() is False
-
-
 @pytest.mark.asyncio
 async def test_no_catchup_returns_none():
     """Test NoCatchup.catchup returns None."""
@@ -152,58 +142,3 @@ async def test_no_catchup_does_not_modify_processor():
 
     # State should be unchanged
     assert processor.test_attr == "original"  # type: ignore
-
-
-# FromReplayingEvents Tests
-
-
-def test_from_replaying_events_is_blocking():
-    """Test FromReplayingEvents.is_blocking returns True."""
-    strategy = FromReplayingEvents()
-    assert strategy.is_blocking() is True
-
-
-@pytest.mark.asyncio
-async def test_from_replaying_events_returns_none():
-    """Test FromReplayingEvents.catchup returns None (TODO implementation)."""
-    strategy = FromReplayingEvents()
-    processor = EventProcessor()
-
-    result = await strategy.catchup(processor)
-
-    assert result is None
-
-
-@pytest.mark.asyncio
-async def test_from_replaying_events_does_not_modify_processor():
-    """Test FromReplayingEvents doesn't modify processor (not implemented)."""
-    strategy = FromReplayingEvents()
-    processor = EventProcessor()
-
-    # Add some state to processor
-    processor.test_attr = "original"  # type: ignore
-
-    await strategy.catchup(processor)
-
-    # State should be unchanged (since it's not implemented)
-    assert processor.test_attr == "original"  # type: ignore
-
-
-# Integration Tests
-
-
-@pytest.mark.asyncio
-async def test_multiple_strategies_can_coexist():
-    """Test multiple strategy instances can be used independently."""
-    no_catchup = NoCatchup()
-    from_replay = FromReplayingEvents()
-    processor = EventProcessor()
-
-    result1 = await no_catchup.catchup(processor)
-    result2 = await from_replay.catchup(processor)
-
-    assert result1 is None
-    assert result2 is None
-    assert no_catchup.is_blocking() is False
-    assert from_replay.is_blocking() is True
-

@@ -45,24 +45,6 @@ class EventProcessorExecutor(Generic[P]):
         strategy: Strategy for catching up when triggered
         batch_size: Number of events to process before checking lag
 
-    Example:
-        >>> subscription = await event_bus.subscribe("orders")
-        >>> processor = OrderReadModelProcessor()
-        >>> condition = AnyOf(
-        ...     AfterNEvents(1000),
-        ...     AfterNAge(timedelta(minutes=5))
-        ... )
-        >>> strategy = FromReplayingEvents()
-        >>>
-        >>> executor = EventProcessorExecutor(
-        ...     subscription=subscription,
-        ...     processor=processor,
-        ...     condition=condition,
-        ...     strategy=strategy,
-        ...     batch_size=100
-        ... )
-        >>> await executor.run()  # Run forever, processing events
-
     Note:
         The run() method runs indefinitely until interrupted. Use asyncio
         task cancellation or exception handling to stop it gracefully.

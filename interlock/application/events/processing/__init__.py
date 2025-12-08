@@ -14,7 +14,6 @@ from .saga import Saga, saga_step, InMemorySagaStateStore, SagaStateStore
 from .strategies import (
     CatchupResult,
     CatchupStrategy,
-    FromReplayingEvents,
     NoCatchup,
 )
 
@@ -24,7 +23,6 @@ __all__ = [
     "CatchupStrategy",
     "CatchupResult",
     "NoCatchup",
-    "FromReplayingEvents",
     "CatchupCondition",
     "Never",
     "AfterNEvents",

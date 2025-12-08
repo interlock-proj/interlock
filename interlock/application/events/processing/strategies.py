@@ -3,9 +3,9 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import TYPE_CHECKING, Generic, TypeVar
 
-if TYPE_CHECKING:
-    from ...events.event import Event
-    from .processor import EventProcessor
+from ....domain import Event
+from .processor import EventProcessor
+
 
 P = TypeVar("P", bound="EventProcessor")
 
@@ -64,29 +64,7 @@ class CatchupStrategy(ABC, Generic[P]):
     - Resource usage: Compute and memory requirements
     - Consistency: Guarantees about event ordering and completeness
     - Applicability: Which scenarios the strategy works for
-
-    Implementations:
-    - NoCatchup: Skip catchup entirely (for testing or specific use cases)
-    - FromReplayingEvents: Replay all events from the event store
-    - FromAggregateSnapshot: Initialize from aggregate snapshots
-    - FromProcedure: Custom initialization via external procedure
     """
-
-    @abstractmethod
-    def is_blocking(self) -> bool:
-        """Determine if catchup blocks new event processing.
-
-        Returns:
-            True if the processor must complete catchup before processing
-            new events (blocking). False if catchup runs concurrently with
-            new event processing (non-blocking) via asyncio.
-
-        Note:
-            Blocking catchup ensures consistency but may delay processing.
-            Non-blocking catchup improves responsiveness but may process
-            events out of order temporarily.
-        """
-        ...
 
     @abstractmethod
     async def catchup(self, processor: P) -> CatchupResult | None:
@@ -133,14 +111,6 @@ class NoCatchup(CatchupStrategy):
         ... )
     """
 
-    def is_blocking(self) -> bool:
-        """NoCatchup is non-blocking (nothing to block on).
-
-        Returns:
-            False - no catchup operation to wait for
-        """
-        return False
-
     async def catchup(self, processor: P) -> None:
         """No-op - no catchup is performed.
 
@@ -150,56 +120,4 @@ class NoCatchup(CatchupStrategy):
         Returns:
             None - no skip window needed
         """
-        return None
-
-
-class FromReplayingEvents(CatchupStrategy):
-    """Catch up by replaying all historical events from the event store.
-
-    This is the conceptually simplest and most straightforward catchup strategy.
-    It replays every event from the beginning through the event processor.
-
-    **Advantages:**
-    - Simple and correct - guarantees all events are processed
-    - No additional infrastructure needed (uses existing event store)
-    - interlock can optimize by filtering irrelevant events
-
-    **Disadvantages:**
-    - Can be very slow for large event stores (millions+ events)
-    - May be intractable for high-volume systems
-    - Processes events the processor doesn't care about
-    - Resource intensive (CPU, memory, I/O)
-
-    **Best for:**
-    - Small to medium event stores (< 1M events)
-    - Initial processor development and testing
-    - Systems where correctness is more important than speed
-
-    Note:
-        This is the default and recommended strategy for most use cases.
-        Only consider alternatives if replay time becomes problematic.
-    """
-
-    def is_blocking(self) -> bool:
-        """Replay is typically blocking to ensure consistency.
-
-        Returns:
-            True - processor waits for replay before processing new events
-        """
-        return True
-
-    async def catchup(self, processor: P) -> None:
-        """Replay events from the event store.
-
-        Args:
-            processor: The event processor to replay events through
-
-        Returns:
-            None - no skip window needed
-
-        Note:
-            Implementation pending - will replay historical events
-            through the processor's event handlers.
-        """
-        # TODO: Implement event replay from event store
         return None
