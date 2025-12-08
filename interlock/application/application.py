@@ -93,17 +93,6 @@ class Application:
         """
         return self.contextual_binding.resolve(type_to_resolve)
 
-    def get_dependency(self, dependency_type: type[T]) -> T:
-        """Alias for resolve() - get a dependency from the application context.
-
-        Args:
-            dependency_type: The type to resolve
-
-        Returns:
-            The resolved dependency
-        """
-        return self.resolve(dependency_type)
-
     async def startup(self) -> None:
         """Startup the application.
 

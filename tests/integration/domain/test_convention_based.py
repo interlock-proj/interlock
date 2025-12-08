@@ -86,7 +86,7 @@ async def test_convention_based_discovers_services():
     )
 
     # Service should be registered by interface
-    audit_service = app.get_dependency(IAuditService)
+    audit_service = app.resolve(IAuditService)
     assert isinstance(audit_service, AuditService)
 
 
@@ -126,7 +126,7 @@ async def test_manual_override_after_convention_based():
     )
 
     # Should use our custom store
-    resolved_store = app.get_dependency(EventStore)
+    resolved_store = app.resolve(EventStore)
     assert resolved_store is custom_store
 
 
