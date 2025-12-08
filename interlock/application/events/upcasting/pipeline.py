@@ -89,8 +89,9 @@ class EventUpcaster(Generic[T, U], ABC):
     async def upcast_event(self, event: Event[T]) -> Event[U]:
         """Transform an entire event from old schema to new schema.
 
-        This method preserves event metadata (id, aggregate_id, sequence_number,
-        timestamp) while transforming the event data payload.
+        This method preserves event metadata (id, aggregate_id, correlation_id,
+        causation_id, sequence_number, timestamp) while transforming the event
+        data payload.
 
         Args:
             event: The event with old schema data
@@ -103,6 +104,8 @@ class EventUpcaster(Generic[T, U], ABC):
             aggregate_id=event.aggregate_id,
             sequence_number=event.sequence_number,
             timestamp=event.timestamp,
+            correlation_id=event.correlation_id,
+            causation_id=event.causation_id,
             data=await self.upcast_payload(event.data),
         )
 
