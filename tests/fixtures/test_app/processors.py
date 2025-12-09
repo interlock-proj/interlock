@@ -1,10 +1,11 @@
 """Event processors and sagas for testing."""
 
 from decimal import Decimal
+
 from pydantic import BaseModel
 
 from interlock.application.events import EventProcessor, Saga
-from interlock.application.events.processing import saga_step, SagaStateStore
+from interlock.application.events.processing import SagaStateStore, saga_step
 from interlock.routing import handles_event
 
 from .aggregates.bank_account import (
@@ -86,9 +87,7 @@ class MoneyTransferSaga(Saga[TransferSagaState]):
         self.transfer_failed_count: int = 0
 
     @saga_step
-    async def on_transfer_initiated(
-        self, event: TransferInitiated
-    ) -> TransferSagaState:
+    async def on_transfer_initiated(self, event: TransferInitiated) -> TransferSagaState:
         return TransferSagaState(
             transfer_id=event.saga_id,
             from_account=event.from_account,
@@ -114,8 +113,6 @@ class MoneyTransferSaga(Saga[TransferSagaState]):
         return state
 
     @saga_step
-    async def on_transfer_failed(
-        self, event: TransferFailed, state: TransferSagaState
-    ) -> None:
+    async def on_transfer_failed(self, event: TransferFailed, state: TransferSagaState) -> None:
         self.transfer_failed_count += 1
         return None  # Delete state

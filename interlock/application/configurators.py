@@ -5,11 +5,11 @@ from collections.abc import Iterable
 from pydantic_settings import BaseSettings
 
 from ..domain import Aggregate, Command
-from .commands import CommandMiddleware
 from .application import ApplicationBuilder
+from .commands import CommandMiddleware
 from .discovery import ClassScanner, ModuleScanner
-from .events.upcasting import EventUpcaster
 from .events.processing import EventProcessor
+from .events.upcasting import EventUpcaster
 
 FRAMEWORK_BASES = (Aggregate, Command, CommandMiddleware, EventProcessor)
 

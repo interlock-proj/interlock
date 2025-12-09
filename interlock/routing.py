@@ -86,8 +86,7 @@ def _extract_handler_type(func: Callable[..., object], param_index: int = 1) -> 
             param_names = func.__code__.co_varnames
             if len(param_names) <= param_index:
                 raise ValueError(
-                    f"Handler {func.__name__} must have at least "
-                    f"{param_index + 1} parameters"
+                    f"Handler {func.__name__} must have at least {param_index + 1} parameters"
                 )
             param_name = param_names[param_index]
             if param_name in annotations:
@@ -98,17 +97,13 @@ def _extract_handler_type(func: Callable[..., object], param_index: int = 1) -> 
     params = list(sig.parameters.values())
 
     if len(params) <= param_index:
-        raise ValueError(
-            f"Handler {func.__name__} must have at least "
-            f"{param_index + 1} parameters"
-        )
+        raise ValueError(f"Handler {func.__name__} must have at least {param_index + 1} parameters")
 
     param = params[param_index]
 
     if param.annotation is inspect.Parameter.empty:
         raise ValueError(
-            f"Handler {func.__name__} parameter '{param.name}' must "
-            f"have a type annotation"
+            f"Handler {func.__name__} parameter '{param.name}' must have a type annotation"
         )
 
     return param.annotation
@@ -135,9 +130,7 @@ class MessageRouter:
 
         # Create singledispatch function with the default handler
         @singledispatch
-        def dispatch(
-            message: object, instance: object, *args: Any, **kwargs: Any
-        ) -> object:
+        def dispatch(message: object, instance: object, *args: Any, **kwargs: Any) -> object:
             return default_handler(message, instance, *args, **kwargs)
 
         self._dispatch = dispatch

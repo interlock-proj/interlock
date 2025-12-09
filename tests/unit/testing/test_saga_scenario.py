@@ -1,14 +1,15 @@
 """Tests for SagaScenario."""
 
-import pytest
 from decimal import Decimal
+
+import pytest
 
 from interlock.testing import SagaScenario
 from tests.fixtures.test_app import (
     MoneyTransferSaga,
-    TransferInitiated,
     TransferCompleted,
     TransferFailed,
+    TransferInitiated,
 )
 
 
@@ -16,9 +17,9 @@ from tests.fixtures.test_app import (
 async def test_saga_handles_single_event():
     """Test that saga handles a single event correctly."""
     scenario = SagaScenario(MoneyTransferSaga)
-    
+
     transfer_id = "transfer-001"
-    
+
     scenario.given(
         TransferInitiated(
             saga_id=transfer_id,
@@ -26,10 +27,8 @@ async def test_saga_handles_single_event():
             to_account="account-2",
             amount=Decimal("100.00"),
         )
-    ).should_have_state(
-        transfer_id, lambda s: s is not None and s.transfer_id == transfer_id
-    )
-    
+    ).should_have_state(transfer_id, lambda s: s is not None and s.transfer_id == transfer_id)
+
     await scenario.execute_scenario()
 
 
@@ -37,9 +36,9 @@ async def test_saga_handles_single_event():
 async def test_saga_creates_initial_state():
     """Test that saga creates initial state correctly."""
     scenario = SagaScenario(MoneyTransferSaga)
-    
+
     transfer_id = "transfer-002"
-    
+
     scenario.given(
         TransferInitiated(
             saga_id=transfer_id,
@@ -57,7 +56,7 @@ async def test_saga_creates_initial_state():
             and not s.completed
         ),
     )
-    
+
     await scenario.execute_scenario()
 
 
@@ -65,9 +64,9 @@ async def test_saga_creates_initial_state():
 async def test_saga_handles_completion():
     """Test that saga handles transfer completion."""
     scenario = SagaScenario(MoneyTransferSaga)
-    
+
     transfer_id = "transfer-003"
-    
+
     scenario.given(
         TransferInitiated(
             saga_id=transfer_id,
@@ -76,12 +75,10 @@ async def test_saga_handles_completion():
             amount=Decimal("100.00"),
         ),
         TransferCompleted(saga_id=transfer_id),
-    ).should_have_state(
-        transfer_id, lambda s: s is not None and s.completed
-    ).should_have_state(
+    ).should_have_state(transfer_id, lambda s: s is not None and s.completed).should_have_state(
         transfer_id, lambda s: scenario.saga.transfer_completed_count == 1
     )
-    
+
     await scenario.execute_scenario()
 
 
@@ -89,9 +86,9 @@ async def test_saga_handles_completion():
 async def test_saga_handles_failure():
     """Test that saga handles transfer failure."""
     scenario = SagaScenario(MoneyTransferSaga)
-    
+
     transfer_id = "transfer-004"
-    
+
     scenario.given(
         TransferInitiated(
             saga_id=transfer_id,
@@ -101,11 +98,12 @@ async def test_saga_handles_failure():
         ),
         TransferFailed(saga_id=transfer_id, reason="Insufficient funds"),
     ).should_have_state(
-        transfer_id, lambda s: s is None  # State should be deleted
+        transfer_id,
+        lambda s: s is None,  # State should be deleted
     )
-    
+
     await scenario.execute_scenario()
-    
+
     # Verify failure was tracked
     assert scenario.saga.transfer_failed_count == 1
 
@@ -114,10 +112,10 @@ async def test_saga_handles_failure():
 async def test_saga_multiple_instances():
     """Test saga can handle multiple concurrent instances."""
     scenario = SagaScenario(MoneyTransferSaga)
-    
+
     transfer_1 = "transfer-005"
     transfer_2 = "transfer-006"
-    
+
     scenario.given(
         TransferInitiated(
             saga_id=transfer_1,
@@ -132,12 +130,10 @@ async def test_saga_multiple_instances():
             amount=Decimal("200.00"),
         ),
         TransferCompleted(saga_id=transfer_1),
-    ).should_have_state(
-        transfer_1, lambda s: s is not None and s.completed
-    ).should_have_state(
+    ).should_have_state(transfer_1, lambda s: s is not None and s.completed).should_have_state(
         transfer_2, lambda s: s is not None and not s.completed
     )
-    
+
     await scenario.execute_scenario()
 
 
@@ -145,13 +141,11 @@ async def test_saga_multiple_instances():
 async def test_saga_given_no_events():
     """Test saga with no events."""
     scenario = SagaScenario(MoneyTransferSaga)
-    
+
     transfer_id = "transfer-007"
-    
-    scenario.given_no_events().should_have_state(
-        transfer_id, lambda s: s is None
-    )
-    
+
+    scenario.given_no_events().should_have_state(transfer_id, lambda s: s is None)
+
     await scenario.execute_scenario()
 
 
@@ -159,9 +153,9 @@ async def test_saga_given_no_events():
 async def test_saga_chainable_given():
     """Test that given() is chainable."""
     scenario = SagaScenario(MoneyTransferSaga)
-    
+
     transfer_id = "transfer-008"
-    
+
     scenario.given(
         TransferInitiated(
             saga_id=transfer_id,
@@ -169,12 +163,10 @@ async def test_saga_chainable_given():
             to_account="account-2",
             amount=Decimal("100.00"),
         )
-    ).given(
-        TransferCompleted(saga_id=transfer_id)
-    ).should_have_state(
+    ).given(TransferCompleted(saga_id=transfer_id)).should_have_state(
         transfer_id, lambda s: s is not None and s.completed
     )
-    
+
     await scenario.execute_scenario()
 
 
@@ -182,9 +174,9 @@ async def test_saga_chainable_given():
 async def test_saga_multiple_state_checks():
     """Test multiple state predicates for the same saga."""
     scenario = SagaScenario(MoneyTransferSaga)
-    
+
     transfer_id = "transfer-009"
-    
+
     scenario.given(
         TransferInitiated(
             saga_id=transfer_id,
@@ -192,14 +184,10 @@ async def test_saga_multiple_state_checks():
             to_account="account-2",
             amount=Decimal("150.00"),
         )
-    ).should_have_state(
-        transfer_id, lambda s: s is not None
-    ).should_have_state(
+    ).should_have_state(transfer_id, lambda s: s is not None).should_have_state(
         transfer_id, lambda s: s.amount == Decimal("150.00")
-    ).should_have_state(
-        transfer_id, lambda s: s.from_account == "account-1"
-    )
-    
+    ).should_have_state(transfer_id, lambda s: s.from_account == "account-1")
+
     await scenario.execute_scenario()
 
 
@@ -208,9 +196,9 @@ async def test_saga_state_predicate_fails():
     """Test that failed state predicate raises AssertionError."""
     with pytest.raises(AssertionError, match="should match state"):
         scenario = SagaScenario(MoneyTransferSaga)
-        
+
         transfer_id = "transfer-010"
-        
+
         scenario.given(
             TransferInitiated(
                 saga_id=transfer_id,
@@ -219,9 +207,10 @@ async def test_saga_state_predicate_fails():
                 amount=Decimal("100.00"),
             )
         ).should_have_state(
-            transfer_id, lambda s: s.amount == Decimal("200.00")  # Wrong amount
+            transfer_id,
+            lambda s: s.amount == Decimal("200.00"),  # Wrong amount
         )
-        
+
         await scenario.execute_scenario()
 
 
@@ -229,9 +218,9 @@ async def test_saga_state_predicate_fails():
 async def test_saga_without_context_manager():
     """Test saga scenario without using context manager."""
     scenario = SagaScenario(MoneyTransferSaga)
-    
+
     transfer_id = "transfer-011"
-    
+
     scenario.given(
         TransferInitiated(
             saga_id=transfer_id,
@@ -239,10 +228,8 @@ async def test_saga_without_context_manager():
             to_account="account-2",
             amount=Decimal("100.00"),
         )
-    ).should_have_state(
-        transfer_id, lambda s: s is not None
-    )
-    
+    ).should_have_state(transfer_id, lambda s: s is not None)
+
     await scenario.execute_scenario()
 
 
@@ -250,7 +237,7 @@ async def test_saga_without_context_manager():
 async def test_saga_with_context_manager():
     """Test saga scenario with async context manager."""
     transfer_id = "transfer-012"
-    
+
     async with SagaScenario(MoneyTransferSaga) as scenario:
         scenario.given(
             TransferInitiated(
@@ -259,9 +246,7 @@ async def test_saga_with_context_manager():
                 to_account="account-2",
                 amount=Decimal("100.00"),
             )
-        ).should_have_state(
-            transfer_id, lambda s: s is not None and s.transfer_id == transfer_id
-        )
+        ).should_have_state(transfer_id, lambda s: s is not None and s.transfer_id == transfer_id)
 
 
 @pytest.mark.asyncio
@@ -269,7 +254,7 @@ async def test_saga_handles_errors():
     """Test that saga errors are captured."""
     # Create a scenario that will cause an error
     # The saga_step decorator requires saga_id, so missing it should cause an error
-    
+
     # For this we'd need an event that doesn't follow the saga_id convention
     # and doesn't have a custom extractor
     # Let's skip this for now as our current saga is well-behaved
@@ -280,9 +265,9 @@ async def test_saga_handles_errors():
 async def test_saga_deletes_state_on_failure():
     """Test that saga deletes state when transfer fails."""
     scenario = SagaScenario(MoneyTransferSaga)
-    
+
     transfer_id = "transfer-013"
-    
+
     scenario.given(
         TransferInitiated(
             saga_id=transfer_id,
@@ -292,7 +277,7 @@ async def test_saga_deletes_state_on_failure():
         ),
         TransferFailed(saga_id=transfer_id, reason="Account frozen"),
     ).should_have_state(transfer_id, lambda s: s is None)
-    
+
     await scenario.execute_scenario()
 
 
@@ -300,9 +285,9 @@ async def test_saga_deletes_state_on_failure():
 async def test_saga_state_persists_across_events():
     """Test that saga state persists across multiple events."""
     scenario = SagaScenario(MoneyTransferSaga)
-    
+
     transfer_id = "transfer-014"
-    
+
     scenario.given(
         TransferInitiated(
             saga_id=transfer_id,
@@ -311,9 +296,9 @@ async def test_saga_state_persists_across_events():
             amount=Decimal("300.00"),
         )
     )
-    
+
     await scenario.execute_scenario()
-    
+
     # Verify state exists
     state = await scenario.state_store.load(transfer_id)
     assert state is not None
@@ -324,7 +309,7 @@ async def test_saga_state_persists_across_events():
 async def test_saga_tracks_completion_count():
     """Test that saga tracks completion count correctly."""
     scenario = SagaScenario(MoneyTransferSaga)
-    
+
     scenario.given(
         TransferInitiated(
             saga_id="t1",
@@ -341,9 +326,9 @@ async def test_saga_tracks_completion_count():
         ),
         TransferCompleted(saga_id="t2"),
     )
-    
+
     await scenario.execute_scenario()
-    
+
     assert scenario.saga.transfer_completed_count == 2
 
 
@@ -351,7 +336,7 @@ async def test_saga_tracks_completion_count():
 async def test_saga_tracks_failure_count():
     """Test that saga tracks failure count correctly."""
     scenario = SagaScenario(MoneyTransferSaga)
-    
+
     scenario.given(
         TransferInitiated(
             saga_id="t1", from_account="a1", to_account="a2", amount=Decimal("100.00")
@@ -362,9 +347,9 @@ async def test_saga_tracks_failure_count():
         ),
         TransferFailed(saga_id="t2", reason="Error 2"),
     )
-    
+
     await scenario.execute_scenario()
-    
+
     assert scenario.saga.transfer_failed_count == 2
 
 
@@ -372,9 +357,9 @@ async def test_saga_tracks_failure_count():
 async def test_saga_complex_state_validation():
     """Test complex state validation with multiple conditions."""
     scenario = SagaScenario(MoneyTransferSaga)
-    
+
     transfer_id = "transfer-015"
-    
+
     scenario.given(
         TransferInitiated(
             saga_id=transfer_id,
@@ -392,7 +377,7 @@ async def test_saga_complex_state_validation():
             and s.from_account != s.to_account
         ),
     )
-    
+
     await scenario.execute_scenario()
 
 
@@ -400,9 +385,9 @@ async def test_saga_complex_state_validation():
 async def test_saga_with_decimal_precision():
     """Test that saga handles decimal precision correctly."""
     scenario = SagaScenario(MoneyTransferSaga)
-    
+
     transfer_id = "transfer-016"
-    
+
     scenario.given(
         TransferInitiated(
             saga_id=transfer_id,
@@ -410,10 +395,8 @@ async def test_saga_with_decimal_precision():
             to_account="account-2",
             amount=Decimal("123.45"),
         )
-    ).should_have_state(
-        transfer_id, lambda s: s is not None and s.amount == Decimal("123.45")
-    )
-    
+    ).should_have_state(transfer_id, lambda s: s is not None and s.amount == Decimal("123.45"))
+
     await scenario.execute_scenario()
 
 
@@ -423,9 +406,9 @@ async def test_saga_scenario_with_should_raise():
     # This would require a saga that raises errors
     # Our current sagas don't raise errors, so we'll create a basic test
     scenario = SagaScenario(MoneyTransferSaga)
-    
+
     transfer_id = "transfer-017"
-    
+
     # This should not raise any errors
     scenario.given(
         TransferInitiated(
@@ -435,7 +418,7 @@ async def test_saga_scenario_with_should_raise():
             amount=Decimal("100.00"),
         )
     )
-    
+
     await scenario.execute_scenario()
 
 
@@ -443,9 +426,9 @@ async def test_saga_scenario_with_should_raise():
 async def test_saga_state_updated_correctly():
     """Test that saga state is updated through the lifecycle."""
     scenario = SagaScenario(MoneyTransferSaga)
-    
+
     transfer_id = "transfer-018"
-    
+
     # Initial state
     scenario.given(
         TransferInitiated(
@@ -455,23 +438,23 @@ async def test_saga_state_updated_correctly():
             amount=Decimal("100.00"),
         )
     )
-    
+
     await scenario.execute_scenario()
-    
+
     # Check initial state
     state = await scenario.state_store.load(transfer_id)
     assert state is not None
     assert not state.completed
-    
+
     # Complete the transfer
     scenario2 = SagaScenario(MoneyTransferSaga)
     scenario2.state_store = scenario.state_store  # Share state store
     scenario2.saga.state_store = scenario.state_store  # Share state store
-    
+
     scenario2.given(TransferCompleted(saga_id=transfer_id))
-    
+
     await scenario2.execute_scenario()
-    
+
     # Check updated state
     state = await scenario.state_store.load(transfer_id)
     assert state is not None
@@ -482,9 +465,9 @@ async def test_saga_state_updated_correctly():
 async def test_saga_handles_out_of_order_events():
     """Test saga behavior with events arriving out of order."""
     scenario = SagaScenario(MoneyTransferSaga)
-    
+
     transfer_id = "transfer-019"
-    
+
     # Complete before initiate (unusual but should be handled)
     scenario.given(
         TransferCompleted(saga_id=transfer_id),
@@ -495,9 +478,9 @@ async def test_saga_handles_out_of_order_events():
             amount=Decimal("100.00"),
         ),
     )
-    
+
     await scenario.execute_scenario()
-    
+
     # State should exist with completed flag
     state = await scenario.state_store.load(transfer_id)
     assert state is not None
@@ -507,9 +490,9 @@ async def test_saga_handles_out_of_order_events():
 async def test_saga_given_no_events_clears_existing():
     """Test that given_no_events() clears previously set events."""
     scenario = SagaScenario(MoneyTransferSaga)
-    
+
     transfer_id = "transfer-020"
-    
+
     scenario.given(
         TransferInitiated(
             saga_id=transfer_id,
@@ -518,6 +501,5 @@ async def test_saga_given_no_events_clears_existing():
             amount=Decimal("100.00"),
         )
     ).given_no_events().should_have_state(transfer_id, lambda s: s is None)
-    
-    await scenario.execute_scenario()
 
+    await scenario.execute_scenario()

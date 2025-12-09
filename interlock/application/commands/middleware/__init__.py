@@ -3,8 +3,8 @@
 from .concurrency import ConcurrencyRetryMiddleware
 from .context import ContextPropagationMiddleware
 from .idempotency import (
-    IdempotencyStorageBackend,
     IdempotencyMiddleware,
+    IdempotencyStorageBackend,
     InMemoryIdempotencyStorageBackend,
 )
 from .logging import LoggingMiddleware

@@ -1,5 +1,6 @@
+from collections.abc import Callable, Coroutine
 from functools import reduce
-from typing import TYPE_CHECKING, Any, Callable, ClassVar, Coroutine
+from typing import TYPE_CHECKING, Any, ClassVar
 
 from ...domain import Aggregate, Command
 from ..aggregates import AggregateRepository

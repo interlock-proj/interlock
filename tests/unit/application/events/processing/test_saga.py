@@ -50,14 +50,18 @@ class CheckoutSaga(Saga[CheckoutState]):
         return CheckoutState(order_id=event.saga_id, status="started")
 
     @saga_step(step_name="reserve_inventory", saga_id=lambda e: e.order_id)
-    async def on_inventory_reserved(self, event: InventoryReserved, state: CheckoutState) -> CheckoutState:
+    async def on_inventory_reserved(
+        self, event: InventoryReserved, state: CheckoutState
+    ) -> CheckoutState:
         state.inventory_reserved = True
         state.status = "inventory_reserved"
         self.dispatched_commands.append("ChargePayment")
         return state
 
     @saga_step(step_name="charge_payment", saga_id=lambda e: e.order_id)
-    async def on_payment_charged(self, event: PaymentCharged, state: CheckoutState) -> CheckoutState:
+    async def on_payment_charged(
+        self, event: PaymentCharged, state: CheckoutState
+    ) -> CheckoutState:
         state.payment_charged = True
         state.status = "payment_charged"
         self.dispatched_commands.append("CompleteOrder")

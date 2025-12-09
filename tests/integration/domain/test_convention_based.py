@@ -19,8 +19,9 @@ async def test_convention_based_discovers_aggregates():
     )
 
     # Verify aggregates were discovered by successfully dispatching a command
-    from tests.conftest import OpenAccount
     from ulid import ULID
+
+    from tests.conftest import OpenAccount
 
     account_id = ULID()
     # If this works, the aggregate was discovered and registered
@@ -39,9 +40,11 @@ async def test_convention_based_discovers_commands():
     )
 
     # Verify commands work by dispatching them
-    from tests.conftest import OpenAccount, DepositMoney
-    from ulid import ULID
     from decimal import Decimal
+
+    from ulid import ULID
+
+    from tests.conftest import DepositMoney, OpenAccount
 
     account_id = ULID()
     # If these work, commands were discovered
@@ -54,7 +57,6 @@ async def test_convention_based_discovers_nested_aggregates():
     """Test that nested packages are discovered recursively."""
     # The nested Order aggregate should have been discovered
     # We can verify this by checking we can build an app and use it
-    from tests.fixtures.test_app.aggregates.nested.order import Order
 
     app = (
         ApplicationBuilder()
@@ -103,9 +105,11 @@ async def test_multiple_convention_based_calls_accumulate():
     )
 
     # Should still work (last registration wins for duplicates)
-    from tests.conftest import OpenAccount, DepositMoney
-    from ulid import ULID
     from decimal import Decimal
+
+    from ulid import ULID
+
+    from tests.conftest import DepositMoney, OpenAccount
 
     account_id = ULID()
     # If these work, multiple calls worked correctly

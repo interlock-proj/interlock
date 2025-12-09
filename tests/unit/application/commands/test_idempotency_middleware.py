@@ -291,4 +291,3 @@ async def test_middleware_different_aggregates_same_key():
 
     # Should be skipped (same idempotency key)
     assert next_handler.await_count == 1
-

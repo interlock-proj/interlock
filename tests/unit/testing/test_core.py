@@ -1,17 +1,18 @@
 """Tests for core testing components."""
 
-import pytest
 from decimal import Decimal
+
+import pytest
 from pydantic import BaseModel
 from ulid import ULID
 
 from interlock.domain import Event
 from interlock.testing.core import (
-    Result,
+    ContainsErrorOfExactType,
     ContainsEventOfExactPayload,
     ContainsEventOfExactType,
-    ContainsErrorOfExactType,
     DoesNotHaveEvents,
+    Result,
     StateMatches,
 )
 
@@ -172,9 +173,7 @@ class TestResult:
         state = State(counter=10, active=True)
         result = Result(events=[], errors=[], states={"key1": state})
 
-        assert result.state_matches(
-            "key1", lambda s: s.counter > 5 and s.counter < 15 and s.active
-        )
+        assert result.state_matches("key1", lambda s: s.counter > 5 and s.counter < 15 and s.active)
 
 
 class TestContainsEventOfExactPayload:
@@ -563,4 +562,3 @@ class TestExpectationCombinations:
 
         assert exp1.was_met(result)
         assert not exp2.was_met(result)
-

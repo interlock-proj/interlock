@@ -1,45 +1,45 @@
 import asyncio
 from collections.abc import Callable
-from typing import Any, TypeVar, Protocol, runtime_checkable
 from types import TracebackType
+from typing import Any, Protocol, TypeVar, runtime_checkable
 
 from ..domain import Aggregate, Command
 from .aggregates import (
-    AggregateRepository,
-    AggregateFactory,
     AggregateCacheBackend,
-    CacheStrategy,
-    AggregateSnapshotStrategy,
+    AggregateFactory,
+    AggregateRepository,
     AggregateSnapshotStorageBackend,
+    AggregateSnapshotStrategy,
+    CacheStrategy,
 )
 from .commands import (
+    AggregateToRepositoryMap,
     CommandBus,
     CommandMiddleware,
-    DelegateToAggregate,
     CommandToAggregateMap,
-    AggregateToRepositoryMap,
+    DelegateToAggregate,
 )
+from .container import ContextualBinding, DependencyContainer
 from .events import (
-    EventBus,
-    EventDelivery,
-    EventStore,
-    EventTransport,
-    InMemoryEventStore,
-    InMemoryEventTransport,
-    SynchronousDelivery,
-    EventProcessor,
-    EventProcessorExecutor,
     CatchupCondition,
     CatchupStrategy,
+    EventBus,
+    EventDelivery,
+    EventProcessor,
+    EventProcessorExecutor,
+    EventStore,
+    EventTransport,
+    EventUpcaster,
+    InMemoryEventStore,
+    InMemoryEventTransport,
+    LazyUpcastingStrategy,
     Never,
     NoCatchup,
-    UpcastingPipeline,
-    EventUpcaster,
-    UpcastingStrategy,
-    LazyUpcastingStrategy,
+    SynchronousDelivery,
     UpcasterMap,
+    UpcastingPipeline,
+    UpcastingStrategy,
 )
-from .container import DependencyContainer, ContextualBinding
 from .events.processing import SagaStateStore
 
 T = TypeVar("T")
@@ -151,9 +151,7 @@ class Application:
         # We will resolve each processors executor from its own container
         # context and then subscribe to the event transport for the processor.
         executors = [
-            self.contextual_binding.container_for(processor).resolve(
-                EventProcessorExecutor
-            )
+            self.contextual_binding.container_for(processor).resolve(EventProcessorExecutor)
             for processor in processors
         ]
 
@@ -168,8 +166,7 @@ class Application:
         # await them all to complete (This will probably be 'forever' since
         # the processors are expected to run until the application is stopped).
         tasks = [
-            executor.run(subscription)
-            for executor, subscription in zip(executors, subscriptions)
+            executor.run(subscription) for executor, subscription in zip(executors, subscriptions)
         ]
         await asyncio.gather(*tasks)
 
@@ -322,9 +319,7 @@ class ApplicationBuilder:
             The application builder.
         """
         container = self.contextual_binding.container_for(aggregate_type)
-        container.register_singleton(
-            AggregateFactory, lambda: AggregateFactory(aggregate_type)
-        )
+        container.register_singleton(AggregateFactory, lambda: AggregateFactory(aggregate_type))
         container.register_singleton(Aggregate, aggregate_type)
         container.register_singleton(AggregateRepository)
         if cache_strategy:
@@ -474,9 +469,7 @@ class ApplicationBuilder:
 
     def _build_aggregate_to_repository_map(self) -> AggregateToRepositoryMap:
         all_repositories = [
-            self.contextual_binding.container_for(aggregate).resolve(
-                AggregateRepository
-            )
+            self.contextual_binding.container_for(aggregate).resolve(AggregateRepository)
             for aggregate in self.contextual_binding.all_of_type(Aggregate)
         ]
         return AggregateToRepositoryMap.from_repositories(all_repositories)

@@ -199,4 +199,3 @@ async def test_middleware_intercept_integration(command):
 
     # Should have retried once
     assert next_handler.await_count == 2
-

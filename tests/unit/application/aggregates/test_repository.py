@@ -63,6 +63,7 @@ async def test_repository_acquire_from_cache(
     bank_account_app, bank_account_factory, in_memory_snapshot_backend
 ):
     """Test repository loads from cache when available."""
+
     # Create custom cache backend that tracks calls
     class TrackingCache(AggregateCacheBackend):
         def __init__(self):
@@ -106,9 +107,7 @@ async def test_repository_acquire_from_cache(
 
 
 @pytest.mark.asyncio
-async def test_repository_acquire_from_snapshot(
-    repository, in_memory_snapshot_backend
-):
+async def test_repository_acquire_from_snapshot(repository, in_memory_snapshot_backend):
     """Test repository loads from snapshot when no cache hit."""
     account_id = ULID()
 
@@ -134,9 +133,7 @@ async def test_repository_acquire_with_events(repository):
     # Create account and emit events
     async with repository.acquire(account_id) as account:
         account.handle(OpenAccount(aggregate_id=account_id, owner="Charlie"))
-        account.handle(
-            DepositMoney(aggregate_id=account_id, amount=Decimal("50.00"))
-        )
+        account.handle(DepositMoney(aggregate_id=account_id, amount=Decimal("50.00")))
 
     # Acquire again - should replay events
     async with repository.acquire(account_id) as account:
@@ -193,11 +190,7 @@ async def test_repository_acquire_clears_events_on_error(repository):
     # Attempt to make changes that fail
     with pytest.raises(ValueError, match="Amount must be positive"):
         async with repository.acquire(account_id) as account:
-            account.handle(
-                DepositMoney(
-                    aggregate_id=account_id, amount=Decimal("-10.00")
-                )
-            )
+            account.handle(DepositMoney(aggregate_id=account_id, amount=Decimal("-10.00")))
 
     # Events should have been cleared, account state unchanged
     async with repository.acquire(account_id) as account:
@@ -227,9 +220,7 @@ async def test_repository_snapshots_on_save(
     # Create account and reach version 2
     async with repository.acquire(account_id) as account:
         account.handle(OpenAccount(aggregate_id=account_id, owner="Henry"))
-        account.handle(
-            DepositMoney(aggregate_id=account_id, amount=Decimal("100.00"))
-        )
+        account.handle(DepositMoney(aggregate_id=account_id, amount=Decimal("100.00")))
 
     # Snapshot should exist
     snapshot = await in_memory_snapshot_backend.load_snapshot(account_id)
@@ -243,6 +234,7 @@ async def test_repository_handles_concurrency_error(
     bank_account_app, bank_account_factory, in_memory_snapshot_backend
 ):
     """Test repository invalidates cache on concurrency error."""
+
     # Create mock event bus that raises ConcurrencyError
     class FailingEventBus:
         def __init__(self, real_bus):
@@ -302,6 +294,7 @@ async def test_repository_caches_on_read_without_changes(
     bank_account_app, bank_account_factory, in_memory_snapshot_backend
 ):
     """Test repository caches aggregate in high-read scenario."""
+
     # Create cache backend that tracks calls
     class TrackingCache(AggregateCacheBackend):
         def __init__(self):
@@ -353,9 +346,7 @@ async def test_repository_caches_on_read_without_changes(
         assert account.owner == "Alice"
 
     # Should have retrieved from cache
-    assert (
-        tracking_cache.get_calls == 3
-    )  # Once for each acquire (including create)
+    assert tracking_cache.get_calls == 3  # Once for each acquire (including create)
     assert tracking_cache.cache[account_id] is not None
 
 
@@ -363,9 +354,7 @@ async def test_repository_caches_on_read_without_changes(
 
 
 @pytest.mark.asyncio
-async def test_repository_list_all_ids(
-    repository, in_memory_snapshot_backend
-):
+async def test_repository_list_all_ids(repository, in_memory_snapshot_backend):
     """Test repository lists all aggregate IDs."""
     # Create multiple accounts
     account1_id = ULID()
@@ -380,15 +369,10 @@ async def test_repository_list_all_ids(
     # Note: list_all_ids returns IDs from snapshot backend
     # Since we're using NeverSnapshot strategy, this will be empty
     # unless we manually save snapshots
-    await in_memory_snapshot_backend.save_snapshot(
-        BankAccount(id=account1_id)
-    )
-    await in_memory_snapshot_backend.save_snapshot(
-        BankAccount(id=account2_id)
-    )
+    await in_memory_snapshot_backend.save_snapshot(BankAccount(id=account1_id))
+    await in_memory_snapshot_backend.save_snapshot(BankAccount(id=account2_id))
 
     ids = await repository.list_all_ids()
     assert len(ids) == 2
     assert account1_id in ids
     assert account2_id in ids
-

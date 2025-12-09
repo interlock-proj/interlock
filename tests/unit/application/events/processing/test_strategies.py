@@ -1,7 +1,9 @@
 """Tests for catchup strategies."""
 
-import pytest
 from datetime import datetime, timedelta, timezone
+
+import pytest
+from pydantic import BaseModel
 from ulid import ULID
 
 from interlock.application.events.processing.processor import EventProcessor
@@ -10,11 +12,11 @@ from interlock.application.events.processing.strategies import (
     NoCatchup,
 )
 from interlock.domain import Event
-from pydantic import BaseModel
 
 
 class TestEvent(BaseModel):
     """Test event for CatchupResult tests."""
+
     value: str
 
 

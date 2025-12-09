@@ -67,4 +67,3 @@ async def test_aggregate_cache_backend_factory_methods():
     backend = AggregateCacheBackend.null()
     assert isinstance(backend, NullAggregateCacheBackend)
     assert await backend.get_aggregate(ULID()) is None
-

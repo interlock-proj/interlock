@@ -30,9 +30,7 @@ def in_memory_snapshot_backend():
 
 
 @pytest.fixture
-def repository(
-    bank_account_app, bank_account_factory, in_memory_snapshot_backend
-):
+def repository(bank_account_app, bank_account_factory, in_memory_snapshot_backend):
     """Create a repository with default strategies."""
     return AggregateRepository(
         bank_account_factory,

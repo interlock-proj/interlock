@@ -158,9 +158,7 @@ class UpcasterMap:
             self.upcasters[source_type] = []
         self.upcasters[source_type].append(upcaster)
 
-    def get_upcasters(
-        self, source_type: type[BaseModel]
-    ) -> list[EventUpcaster[Any, Any]]:
+    def get_upcasters(self, source_type: type[BaseModel]) -> list[EventUpcaster[Any, Any]]:
         return self.upcasters.get(source_type, [])
 
 
@@ -172,9 +170,7 @@ class UpcastingPipeline:
     where events can be transformed through multiple versions (V1→V2→V3).
     """
 
-    def __init__(
-        self, upcasting_strategy: UpcastingStrategy, upcaster_map: UpcasterMap
-    ):
+    def __init__(self, upcasting_strategy: UpcastingStrategy, upcaster_map: UpcasterMap):
         self.upcasting_strategy = upcasting_strategy
         self.upcaster_map = upcaster_map
 

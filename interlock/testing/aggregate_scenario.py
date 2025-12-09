@@ -1,4 +1,5 @@
-from typing import Generic, TypeVar, Type, Callable, Any
+from collections.abc import Callable
+from typing import Any, Generic, TypeVar
 
 from pydantic import BaseModel
 from ulid import ULID
@@ -6,10 +7,10 @@ from ulid import ULID
 from interlock.domain import Aggregate, Command
 
 from .core import (
-    Scenario,
     ContainsEventOfExactPayload,
     ContainsEventOfExactType,
     DoesNotHaveEvents,
+    Scenario,
     StateMatches,
 )
 
@@ -28,7 +29,7 @@ class AggregateScenario(Scenario[A], Generic[A]):
     If the expectations are not met, an AssertionError will be raised.
     """
 
-    def __init__(self, aggregate: Type[A], aggregate_id: ULID | None = None):
+    def __init__(self, aggregate: type[A], aggregate_id: ULID | None = None):
         super().__init__()
         self.aggregate_id = aggregate_id or ULID()
         self.aggregate = aggregate(id=self.aggregate_id)
@@ -64,7 +65,7 @@ class AggregateScenario(Scenario[A], Generic[A]):
         return self
 
     def should_emit(
-        self, *event_or_event_types: Type[BaseModel] | BaseModel
+        self, *event_or_event_types: type[BaseModel] | BaseModel
     ) -> "AggregateScenario[A]":
         for e in event_or_event_types:
             if isinstance(e, BaseModel):
@@ -77,9 +78,7 @@ class AggregateScenario(Scenario[A], Generic[A]):
         self.expectations.append(DoesNotHaveEvents())
         return self
 
-    def should_have_state(
-        self, predicate: Callable[[A], bool]
-    ) -> "AggregateScenario[A]":
+    def should_have_state(self, predicate: Callable[[A], bool]) -> "AggregateScenario[A]":
         self.expectations.append(StateMatches(self.aggregate_id, predicate))
         return self
 

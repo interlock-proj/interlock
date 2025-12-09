@@ -6,7 +6,7 @@ This package provides:
 - UpcastingStrategy: Strategies for when to apply upcasting
 """
 
-from .pipeline import EventUpcaster, UpcastingPipeline, UpcasterMap
+from .pipeline import EventUpcaster, UpcasterMap, UpcastingPipeline
 from .strategies import EagerUpcastingStrategy, LazyUpcastingStrategy, UpcastingStrategy
 
 __all__ = [

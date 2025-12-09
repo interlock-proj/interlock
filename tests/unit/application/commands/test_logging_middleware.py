@@ -7,7 +7,7 @@ import pytest
 from ulid import ULID
 
 from interlock.application.commands.middleware.logging import LoggingMiddleware
-from interlock.context import ExecutionContext, set_context, clear_context
+from interlock.context import ExecutionContext, clear_context, set_context
 from interlock.domain import Command
 
 
@@ -79,7 +79,10 @@ async def test_logging_middleware_logs_command_without_context(command, caplog):
     assert "Received Command" in caplog.text
 
     # Verify command metadata in extra
-    assert any("SampleCommand" in rec.message or "SampleCommand" in str(rec.__dict__) for rec in caplog.records)
+    assert any(
+        "SampleCommand" in rec.message or "SampleCommand" in str(rec.__dict__)
+        for rec in caplog.records
+    )
 
     # Command should be passed to next handler
     next_handler.assert_awaited_once_with(command)
@@ -329,4 +332,3 @@ async def test_logging_middleware_with_command_id_only(command, caplog):
     log_record = caplog.records[0]
     assert hasattr(log_record, "command_id")
     assert log_record.command_id == str(command_id)
-

@@ -4,11 +4,9 @@ import pytest
 from pydantic import BaseModel
 from ulid import ULID
 
-from interlock.domain import Aggregate
 from interlock.application.application import ApplicationBuilder
-from interlock.domain import Command
-from interlock.domain import Event
 from interlock.application.events.upcasting import EventUpcaster
+from interlock.domain import Aggregate, Command, Event
 from interlock.routing import applies_event, handles_command
 
 
@@ -40,18 +38,14 @@ class UserRegisteredV1ToV2(EventUpcaster[UserRegisteredV1, UserRegisteredV2]):
 
     async def upcast_payload(self, data: UserRegisteredV1) -> UserRegisteredV2:
         # Assume username is email format
-        return UserRegisteredV2(
-            email=data.username, display_name=data.username.split("@")[0]
-        )
+        return UserRegisteredV2(email=data.username, display_name=data.username.split("@")[0])
 
 
 class UserRegisteredV2ToV3(EventUpcaster[UserRegisteredV2, UserRegisteredV3]):
     """Transform V2 to V3."""
 
     async def upcast_payload(self, data: UserRegisteredV2) -> UserRegisteredV3:
-        return UserRegisteredV3(
-            email=data.email, display_name=data.display_name, verified=False
-        )
+        return UserRegisteredV3(email=data.email, display_name=data.display_name, verified=False)
 
 
 # Commands
@@ -188,9 +182,7 @@ async def test_upcasting_preserves_event_metadata():
     # Check that metadata is preserved
     assert isinstance(event, Event)
     assert event.aggregate_id == user_id
-    assert (
-        event.sequence_number >= 0
-    )  # Sequence numbers start at 0 or 1 depending on impl
+    assert event.sequence_number >= 0  # Sequence numbers start at 0 or 1 depending on impl
     assert event.id is not None
     assert event.timestamp is not None
 

@@ -54,9 +54,7 @@ class ConcurrencyRetryMiddleware(CommandMiddleware):
         self.retry_delay = retry_delay
 
     @intercepts
-    async def retry_on_concurrency(
-        self, command: Command, next: CommandHandler
-    ) -> None:
+    async def retry_on_concurrency(self, command: Command, next: CommandHandler) -> None:
         """Intercept all commands and retry on concurrency errors.
 
         Args:
@@ -80,6 +78,4 @@ class ConcurrencyRetryMiddleware(CommandMiddleware):
                 # Don't sleep after the last attempt
                 if attempt < self.max_attempts - 1:
                     await asyncio.sleep(self.retry_delay)
-        raise ConcurrencyError(
-            f"Max attempts ({self.max_attempts}) reached"
-        ) from last_error
+        raise ConcurrencyError(f"Max attempts ({self.max_attempts}) reached") from last_error

@@ -1,7 +1,8 @@
 """Tests for catchup conditions and lag metrics."""
 
-import pytest
 from datetime import timedelta
+
+import pytest
 
 from interlock.application.events.processing.conditions import (
     AfterNAge,
@@ -11,7 +12,6 @@ from interlock.application.events.processing.conditions import (
     Lag,
     Never,
 )
-
 
 # Fixtures
 
@@ -31,9 +31,7 @@ def moderate_lag():
 @pytest.fixture
 def high_lag():
     """Lag with high backlog and age."""
-    return Lag(
-        unprocessed_events=10_000, average_event_age=timedelta(minutes=30)
-    )
+    return Lag(unprocessed_events=10_000, average_event_age=timedelta(minutes=30))
 
 
 # Lag Tests
@@ -157,9 +155,7 @@ def test_after_n_age_triggers_when_exceeded():
     condition = AfterNAge(timedelta(minutes=5))
 
     # Below threshold
-    lag_below = Lag(
-        unprocessed_events=0, average_event_age=timedelta(minutes=3)
-    )
+    lag_below = Lag(unprocessed_events=0, average_event_age=timedelta(minutes=3))
     assert not condition.should_catchup(lag_below)
 
     # At threshold
@@ -167,9 +163,7 @@ def test_after_n_age_triggers_when_exceeded():
     assert not condition.should_catchup(lag_at)
 
     # Above threshold
-    lag_above = Lag(
-        unprocessed_events=0, average_event_age=timedelta(minutes=6)
-    )
+    lag_above = Lag(unprocessed_events=0, average_event_age=timedelta(minutes=6))
     assert condition.should_catchup(lag_above)
 
 
@@ -193,9 +187,7 @@ def test_any_of_creation():
 
 def test_any_of_validation_empty():
     """Test AnyOf rejects empty conditions list."""
-    with pytest.raises(
-        ValueError, match="Must provide at least one condition"
-    ):
+    with pytest.raises(ValueError, match="Must provide at least one condition"):
         AnyOf()
 
 
@@ -264,9 +256,7 @@ def test_all_of_creation():
 
 def test_all_of_validation_empty():
     """Test AllOf rejects empty conditions list."""
-    with pytest.raises(
-        ValueError, match="Must provide at least one condition"
-    ):
+    with pytest.raises(ValueError, match="Must provide at least one condition"):
         AllOf()
 
 
@@ -340,9 +330,7 @@ def test_nested_any_of_all_of():
     assert condition.should_catchup(lag1)
 
     # Only second condition of AnyOf met
-    lag2 = Lag(
-        unprocessed_events=20_000, average_event_age=timedelta(minutes=1)
-    )
+    lag2 = Lag(unprocessed_events=20_000, average_event_age=timedelta(minutes=1))
     assert condition.should_catchup(lag2)
 
     # Neither branch met

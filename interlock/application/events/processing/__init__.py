@@ -10,7 +10,7 @@ from .conditions import (
 )
 from .executor import EventProcessorExecutor
 from .processor import EventProcessor
-from .saga import Saga, saga_step, InMemorySagaStateStore, SagaStateStore
+from .saga import InMemorySagaStateStore, Saga, SagaStateStore, saga_step
 from .strategies import (
     CatchupResult,
     CatchupStrategy,

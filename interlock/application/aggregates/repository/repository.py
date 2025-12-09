@@ -86,9 +86,7 @@ class AggregateRepository(Generic[A]):
             >>> user_ids = await user_repository.list_all_ids()
             >>> # [ULID('...'), ULID('...'), ...]
         """
-        return await self.snapshot_backend.list_aggregate_ids_by_type(
-            self.aggregate_type
-        )
+        return await self.snapshot_backend.list_aggregate_ids_by_type(self.aggregate_type)
 
     @asynccontextmanager
     async def acquire(self, aggregate_id: ULID) -> AsyncIterator[A]:
@@ -125,9 +123,7 @@ class AggregateRepository(Generic[A]):
 
         # (High Cost) Third, we will load all events that have occurred since the snapshot.
         # If there is no snapshot, we will load all events since the aggregate was created.
-        full_events = await self.event_bus.load_events(
-            aggregate_id, aggregate.version + 1
-        )
+        full_events = await self.event_bus.load_events(aggregate_id, aggregate.version + 1)
 
         # Replay events to rebuild state
         aggregate.replay_events([event.data for event in full_events])

@@ -1,13 +1,13 @@
-import pytest
 from decimal import Decimal
 
+import pytest
 from ulid import ULID
 
 from interlock.testing import AggregateScenario
 from tests.fixtures.test_app import (
     BankAccount,
-    OpenAccount,
     DepositMoney,
+    OpenAccount,
     WithdrawMoney,
 )
 from tests.fixtures.test_app.aggregates.bank_account import (
@@ -41,9 +41,7 @@ async def test_scenario_with_given_events():
             MoneyDeposited(amount=Decimal("100.00")),
         ).when(
             WithdrawMoney(aggregate_id=scenario.aggregate_id, amount=Decimal("50.00"))
-        ).should_emit(
-            MoneyWithdrawn(amount=Decimal("50.00"))
-        )
+        ).should_emit(MoneyWithdrawn(amount=Decimal("50.00")))
 
 
 @pytest.mark.asyncio
@@ -136,9 +134,7 @@ async def test_scenario_handles_insufficient_funds():
             MoneyDeposited(amount=Decimal("50.00")),
         ).when(
             WithdrawMoney(aggregate_id=scenario.aggregate_id, amount=Decimal("100.00"))
-        ).should_raise(
-            ValueError
-        ).should_emit_nothing()
+        ).should_raise(ValueError).should_emit_nothing()
 
 
 @pytest.mark.asyncio
@@ -146,9 +142,7 @@ async def test_scenario_chainable_api():
     scenario = AggregateScenario(BankAccount)
     scenario.given(AccountOpened(owner="Olivia")).given(
         MoneyDeposited(amount=Decimal("100.00"))
-    ).when(
-        DepositMoney(aggregate_id=scenario.aggregate_id, amount=Decimal("50.00"))
-    ).should_emit(
+    ).when(DepositMoney(aggregate_id=scenario.aggregate_id, amount=Decimal("50.00"))).should_emit(
         MoneyDeposited(amount=Decimal("50.00"))
     )
     await scenario.execute_scenario()
@@ -159,9 +153,9 @@ async def test_custom_id_works_with_context_manager():
     custom_id = ULID()
     async with AggregateScenario(BankAccount, aggregate_id=custom_id) as scenario:
         assert scenario.aggregate_id == custom_id
-        scenario.when(
-            OpenAccount(aggregate_id=scenario.aggregate_id, owner="Paula")
-        ).should_emit(AccountOpened(owner="Paula"))
+        scenario.when(OpenAccount(aggregate_id=scenario.aggregate_id, owner="Paula")).should_emit(
+            AccountOpened(owner="Paula")
+        )
 
 
 def test_scenario_auto_generates_aggregate_id():

@@ -1,11 +1,10 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime
-from typing import TYPE_CHECKING, Generic, TypeVar
+from typing import Generic, TypeVar
 
 from ....domain import Event
 from .processor import EventProcessor
-
 
 P = TypeVar("P", bound="EventProcessor")
 

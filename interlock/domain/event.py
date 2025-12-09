@@ -77,9 +77,7 @@ class Event(BaseModel, Generic[T]):
         default_factory=ULID,
         description="Unique identifier for this event instance",
     )
-    aggregate_id: ULID = Field(
-        description="ID of the aggregate that produced this event"
-    )
+    aggregate_id: ULID = Field(description="ID of the aggregate that produced this event")
     data: T = Field(description="Typed event data conforming to schema T")
     sequence_number: int = Field(
         description="Position in aggregate's event stream (1-indexed, monotonically increasing)"

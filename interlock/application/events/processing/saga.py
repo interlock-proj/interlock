@@ -5,12 +5,12 @@ import logging
 from abc import ABC, abstractmethod
 from collections.abc import Callable
 from functools import wraps
-from typing import Any, Generic, Type, TypeVar
+from typing import Any, Generic, TypeVar
 
 from pydantic import BaseModel
 
-from .processor import EventProcessor
 from ....routing import handles_event
+from .processor import EventProcessor
 
 TState = TypeVar("TState", bound=BaseModel)
 TEvent = TypeVar("TEvent", bound=BaseModel)
@@ -164,7 +164,6 @@ class InMemorySagaStateStore(SagaStateStore):
         return step_name in self._completed_steps.get(saga_id, set())
 
 
-
 class Saga(EventProcessor, Generic[TState]):
     """Base class for stateful sagas with automatic state management.
 
@@ -259,7 +258,7 @@ class SagaStepExecutor(ABC):
     @staticmethod
     def executor_from_function(
         function: Callable[..., Any],
-    ) -> Type["SagaStepExecutor"]:
+    ) -> type["SagaStepExecutor"]:
         params = list(inspect.signature(function).parameters.values())
         expects_state = len(params) >= 3  # self, event, state
         return SubsequentStepExecutor if expects_state else InitialStepExecutor
@@ -293,8 +292,7 @@ class SagaStepExecutor(ABC):
         """Check if step is already complete. Returns True if should skip."""
         if await saga.state_store.is_step_complete(saga_id, self.step_name):
             self.logger.info(
-                f"Step '{self.step_name}' already complete for saga "
-                f"{saga_id}, skipping"
+                f"Step '{self.step_name}' already complete for saga {saga_id}, skipping"
             )
             return True
         return False
@@ -313,9 +311,7 @@ class SagaStepExecutor(ABC):
         self.logger.info(f"Step '{self.step_name}' completed for saga {saga_id}")
 
     @abstractmethod
-    async def execute_handler(
-        self, saga: Saga[Any], event: BaseModel, saga_id: str
-    ) -> Any:
+    async def execute_handler(self, saga: Saga[Any], event: BaseModel, saga_id: str) -> Any:
         """Execute the handler function with appropriate parameters."""
         ...
 
@@ -337,9 +333,7 @@ class SagaStepExecutor(ABC):
 class InitialStepExecutor(SagaStepExecutor):
     """Executor for initial saga steps that don't expect existing state."""
 
-    async def execute_handler(
-        self, saga: Saga[Any], event: BaseModel, saga_id: str
-    ) -> Any:
+    async def execute_handler(self, saga: Saga[Any], event: BaseModel, saga_id: str) -> Any:
         """Execute handler without state parameter."""
         return await self.handler_func(saga, event)
 
@@ -347,9 +341,7 @@ class InitialStepExecutor(SagaStepExecutor):
 class SubsequentStepExecutor(SagaStepExecutor):
     """Executor for subsequent saga steps that expect existing state."""
 
-    async def execute_handler(
-        self, saga: Saga[Any], event: BaseModel, saga_id: str
-    ) -> Any:
+    async def execute_handler(self, saga: Saga[Any], event: BaseModel, saga_id: str) -> Any:
         """Execute handler with state parameter."""
         state = await saga.state_store.load(saga_id)
         if state is None:

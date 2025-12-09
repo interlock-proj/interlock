@@ -1,8 +1,9 @@
 import inspect
 from abc import ABC, abstractmethod
 from collections import OrderedDict
+from collections.abc import Callable
 from itertools import chain
-from typing import Any, Callable, Generic, Optional, TypeVar, get_origin
+from typing import Any, Generic, Optional, TypeVar, get_origin
 
 T = TypeVar("T")
 
@@ -18,12 +19,8 @@ class DependencyNotFoundError(Exception):
 
 class DependencyCircularReferenceError(Exception):
     @classmethod
-    def from_container(
-        cls, container: "DependencyContainer"
-    ) -> "DependencyCircularReferenceError":
-        return cls(
-            f"Circular reference detected while resolving {container.all_resolving() }"
-        )
+    def from_container(cls, container: "DependencyContainer") -> "DependencyCircularReferenceError":
+        return cls(f"Circular reference detected while resolving {container.all_resolving()}")
 
 
 class Dependency(ABC, Generic[T]):
@@ -43,8 +40,7 @@ class FactoryDependency(Dependency[T]):
         return {
             k: container.resolve(v.annotation)
             for k, v in inspect.signature(self.factory).parameters.items()
-            if v.annotation is not inspect.Parameter.empty
-            and v.default is inspect.Parameter.empty
+            if v.annotation is not inspect.Parameter.empty and v.default is inspect.Parameter.empty
         }
 
 
@@ -75,9 +71,7 @@ class DependencyContainer:
 
     def all_resolving(self) -> list[type[T]]:
         return [
-            k
-            for k in self.dependencies
-            if getattr(self.dependencies[k], "_resolving", False)
+            k for k in self.dependencies if getattr(self.dependencies[k], "_resolving", False)
         ] + (self.parent.all_resolving() if self.parent else [])
 
     def resolve(self, dependency_type: type[T]) -> T:
@@ -141,14 +135,10 @@ class ContextualBinding:
     def all_of_type(self, base: type[T]) -> list[type[T]]:
         return [
             c
-            for c in chain(
-                self.type_to_child_container.keys(), self.container.dependencies.keys()
-            )
+            for c in chain(self.type_to_child_container.keys(), self.container.dependencies.keys())
             if issubclass(c, base)
         ]
 
     def resolve_all(self) -> list[T]:
         # Resolve all dependencies registered in the root container
-        return [
-            dep.resolve(self.container) for dep in self.container.dependencies.values()
-        ]
+        return [dep.resolve(self.container) for dep in self.container.dependencies.values()]

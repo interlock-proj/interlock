@@ -14,15 +14,7 @@ from interlock.application.events.store import EventStore
 # Import all test domain objects from unified test app
 from tests.fixtures.test_app import (
     BankAccount,
-    DepositMoney,
     ExecutionTracker,
-    OpenAccount,
-    WithdrawMoney,
-)
-from tests.fixtures.test_app.aggregates.bank_account import (
-    AccountOpened,
-    MoneyDeposited,
-    MoneyWithdrawn,
 )
 
 

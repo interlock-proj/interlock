@@ -1,20 +1,16 @@
 from abc import ABC, abstractmethod
-from typing import (
-    Iterable,
-    Type,
-    TypeVar,
-    Callable,
-    Generic,
-    Mapping,
-    Any,
-    Self,
-)
+from collections.abc import Callable, Iterable, Mapping
 from types import TracebackType
+from typing import (
+    Any,
+    Generic,
+    Self,
+    TypeVar,
+)
 
 from pydantic import BaseModel
 
 from interlock.domain import Event
-
 
 TState = TypeVar("TState", bound=BaseModel)
 
@@ -30,18 +26,16 @@ class Result(Generic[TState]):
         self.errors = errors
         self.states = states if states is not None else {}
 
-    def contains_event_of_type(self, event_type: Type[BaseModel]) -> bool:
+    def contains_event_of_type(self, event_type: type[BaseModel]) -> bool:
         return any(isinstance(event.data, event_type) for event in self.events)
 
     def contains_event(self, payload: BaseModel) -> bool:
         return any(event.data == payload for event in self.events)
 
-    def contains_error_of_type(self, error_type: Type[Exception]) -> bool:
+    def contains_error_of_type(self, error_type: type[Exception]) -> bool:
         return any(isinstance(error, error_type) for error in self.errors)
 
-    def state_matches(
-        self, state_key: Any, predicate: Callable[[TState], bool]
-    ) -> bool:
+    def state_matches(self, state_key: Any, predicate: Callable[[TState], bool]) -> bool:
         if state_key in self.states:
             return predicate(self.states[state_key])
         else:
@@ -77,7 +71,7 @@ class ContainsEventOfExactPayload(Expectation):
 
 
 class ContainsEventOfExactType(Expectation):
-    def __init__(self, event_type: Type[BaseModel]):
+    def __init__(self, event_type: type[BaseModel]):
         self.event_type = event_type
 
     def was_met(self, result: Result) -> bool:
@@ -88,7 +82,7 @@ class ContainsEventOfExactType(Expectation):
 
 
 class ContainsErrorOfExactType(Expectation):
-    def __init__(self, error_type: Type[Exception]):
+    def __init__(self, error_type: type[Exception]):
         self.error_type = error_type
 
     def was_met(self, result: Result) -> bool:
@@ -154,7 +148,7 @@ class Scenario(ABC, Generic[TState]):
         self.event_payloads = []
         return self
 
-    def should_raise(self, error_type: Type[Exception]) -> Self:
+    def should_raise(self, error_type: type[Exception]) -> Self:
         self.expectations.append(ContainsErrorOfExactType(error_type))
         return self
 
@@ -172,7 +166,7 @@ class Scenario(ABC, Generic[TState]):
 
     async def __aexit__(
         self,
-        exc_type: Type[BaseException] | None,
+        exc_type: type[BaseException] | None,
         exc_value: BaseException | None,
         traceback: TracebackType | None,
     ) -> None:

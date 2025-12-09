@@ -138,9 +138,7 @@ class ModuleScanner:
         yield self.root_module
         yield from self._scan_package_recursive(self.root_module)
 
-    def _scan_package_recursive(
-        self, package: ModuleType
-    ) -> Iterable[ModuleType]:
+    def _scan_package_recursive(self, package: ModuleType) -> Iterable[ModuleType]:
         """Recursively scan a package for all submodules.
 
         Args:
@@ -177,9 +175,7 @@ class ClassScanner:
     """Extract classes from modules by type."""
 
     @staticmethod
-    def find_subclasses(
-        module: ModuleType, base_class: type[T]
-    ) -> Iterable[type[T]]:
+    def find_subclasses(module: ModuleType, base_class: type[T]) -> Iterable[type[T]]:
         """Find all subclasses of base_class in module.
 
         Filters out:
@@ -263,17 +259,11 @@ class ClassScanner:
             <class 'ConcreteService'>
         """
         # Get all base classes (excluding object)
-        bases = [
-            base for base in inspect.getmro(cls)
-            if base not in (cls, object)
-        ]
+        bases = [base for base in inspect.getmro(cls) if base not in (cls, object)]
 
         # Find first ABC or Protocol
         for base in bases:
-            if (
-                inspect.isabstract(base)
-                or getattr(base, "_is_protocol", False)
-            ):
+            if inspect.isabstract(base) or getattr(base, "_is_protocol", False):
                 return base
 
         # No interface found, use concrete type
@@ -294,9 +284,7 @@ def _should_include_class(cls: type, name: str, module: ModuleType) -> bool:
     return not name.startswith("_") and cls.__module__ == module.__name__
 
 
-def _should_include_subclass(
-    cls: type, name: str, base_class: type, module: ModuleType
-) -> bool:
+def _should_include_subclass(cls: type, name: str, base_class: type, module: ModuleType) -> bool:
     """Check if a subclass should be included in results.
 
     Args:

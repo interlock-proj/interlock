@@ -1,8 +1,9 @@
-import pytest
-import time
 import asyncio
+import time
 
-from interlock.application import HasLifecycle, ApplicationBuilder, Application
+import pytest
+
+from interlock.application import Application, ApplicationBuilder, HasLifecycle
 
 
 class ComponentA(HasLifecycle):
@@ -25,11 +26,7 @@ class ComponentB(ComponentA):
 
 @pytest.fixture
 def base_application_with_lifecycle_components(base_app_builder: ApplicationBuilder):
-    return (
-        base_app_builder.register_dependency(ComponentA)
-        .register_dependency(ComponentB)
-        .build()
-    )
+    return base_app_builder.register_dependency(ComponentA).register_dependency(ComponentB).build()
 
 
 @pytest.mark.asyncio

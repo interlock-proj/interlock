@@ -3,12 +3,11 @@ import logging
 import pytest
 from ulid import ULID
 
-from interlock.application.commands import CommandBus, DelegateToAggregate
 from interlock.application.commands.middleware import LoggingMiddleware
 from tests.conftest import (
     BankAccount,
-    ExecutionTracker,
     DepositMoney,
+    ExecutionTracker,
     OpenAccount,
 )
 
@@ -58,9 +57,7 @@ async def test_middleware_wraps_handler_execution(
 
 
 @pytest.mark.asyncio
-async def test_multiple_middlewares_execute_in_order(
-    aggregate_id: ULID, command_handler
-):
+async def test_multiple_middlewares_execute_in_order(aggregate_id: ULID, command_handler):
     tracker1 = ExecutionTracker()
     tracker2 = ExecutionTracker()
 
@@ -86,9 +83,7 @@ def test_logging_middleware_accepts_log_levels():
 
 
 @pytest.mark.asyncio
-async def test_logging_middleware_logs_commands(
-    aggregate_id: ULID, caplog, command_handler
-):
+async def test_logging_middleware_logs_commands(aggregate_id: ULID, caplog, command_handler):
     middleware = LoggingMiddleware("INFO")
     command = DepositMoney(aggregate_id=aggregate_id, amount=5)
 
@@ -116,12 +111,8 @@ async def test_command_bus_routes_different_commands(
 ):
     from decimal import Decimal
 
-    await bank_account_app.dispatch(
-        OpenAccount(aggregate_id=aggregate_id, owner="Alice")
-    )
-    await bank_account_app.dispatch(
-        DepositMoney(aggregate_id=aggregate_id, amount=Decimal("5"))
-    )
+    await bank_account_app.dispatch(OpenAccount(aggregate_id=aggregate_id, owner="Alice"))
+    await bank_account_app.dispatch(DepositMoney(aggregate_id=aggregate_id, amount=Decimal("5")))
 
     # Verify by checking events were saved
     events = await event_store.load_events(aggregate_id, 1)
@@ -131,9 +122,7 @@ async def test_command_bus_routes_different_commands(
 
 
 @pytest.mark.asyncio
-async def test_command_bus_raises_on_unregistered_command(
-    aggregate_id: ULID, base_app_builder
-):
+async def test_command_bus_raises_on_unregistered_command(aggregate_id: ULID, base_app_builder):
     # Build an app without registering BankAccount aggregate
     # This should fail when trying to dispatch DepositMoney
     from interlock.application.container import DependencyNotFoundError
@@ -145,9 +134,7 @@ async def test_command_bus_raises_on_unregistered_command(
 
 
 @pytest.mark.asyncio
-async def test_create_builds_working_bus(
-    aggregate_id: ULID, bank_account_app, event_store
-):
+async def test_create_builds_working_bus(aggregate_id: ULID, bank_account_app, event_store):
     await bank_account_app.dispatch(DepositMoney(aggregate_id=aggregate_id, amount=15))
 
     # Verify by checking events were saved

@@ -1,11 +1,11 @@
-from typing import Generic, Type, TypeVar, Callable, Any
+from collections.abc import Callable
+from typing import Any, Generic, TypeVar
 
 from pydantic import BaseModel
 
-from interlock.application import ApplicationBuilder
 from interlock.application.events import EventProcessor, Saga, SagaStateStore
 
-from .core import StateMatches, Scenario
+from .core import Scenario, StateMatches
 
 TProcessor = TypeVar("TProcessor", bound=EventProcessor)
 TSagaState = TypeVar("TSagaState", bound=BaseModel)
@@ -17,7 +17,7 @@ PROCESSOR_STATE_KEY = "processor_state"
 class ProcessorScenario(Scenario[TProcessor], Generic[TProcessor]):
     def __init__(
         self,
-        processor_type: Type[TProcessor],
+        processor_type: type[TProcessor],
     ):
         super().__init__()
         self.processor_type = processor_type
@@ -43,7 +43,7 @@ class ProcessorScenario(Scenario[TProcessor], Generic[TProcessor]):
 class SagaScenario(Scenario[TSagaState], Generic[TSaga, TSagaState]):
     def __init__(
         self,
-        saga_type: Type[TSaga],
+        saga_type: type[TSaga],
     ):
         super().__init__()
         self.saga_type = saga_type
