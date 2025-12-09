@@ -166,7 +166,8 @@ class Application:
         # await them all to complete (This will probably be 'forever' since
         # the processors are expected to run until the application is stopped).
         tasks = [
-            executor.run(subscription) for executor, subscription in zip(executors, subscriptions)
+            executor.run(subscription)
+            for executor, subscription in zip(executors, subscriptions, strict=False)
         ]
         await asyncio.gather(*tasks)
 

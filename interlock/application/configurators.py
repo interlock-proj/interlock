@@ -1,6 +1,6 @@
 import inspect
 from abc import ABC, abstractmethod
-from collections.abc import Iterable
+from typing import TYPE_CHECKING
 
 from pydantic_settings import BaseSettings
 
@@ -10,6 +10,9 @@ from .commands import CommandMiddleware
 from .discovery import ClassScanner, ModuleScanner
 from .events.processing import EventProcessor
 from .events.upcasting import EventUpcaster
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable
 
 FRAMEWORK_BASES = (Aggregate, Command, CommandMiddleware, EventProcessor)
 

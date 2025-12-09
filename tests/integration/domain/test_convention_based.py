@@ -5,6 +5,7 @@ import pytest
 from interlock.application import ApplicationBuilder
 from interlock.application.events import InMemoryEventStore, InMemoryEventTransport
 from interlock.application.events.store import EventStore
+from tests.fixtures.test_app.aggregates.bank_account import DepositMoney, OpenAccount
 
 
 @pytest.mark.asyncio
@@ -20,8 +21,6 @@ async def test_convention_based_discovers_aggregates():
 
     # Verify aggregates were discovered by successfully dispatching a command
     from ulid import ULID
-
-    from tests.conftest import OpenAccount
 
     account_id = ULID()
     # If this works, the aggregate was discovered and registered
@@ -44,7 +43,6 @@ async def test_convention_based_discovers_commands():
 
     from ulid import ULID
 
-    from tests.conftest import DepositMoney, OpenAccount
 
     account_id = ULID()
     # If these work, commands were discovered
@@ -108,8 +106,6 @@ async def test_multiple_convention_based_calls_accumulate():
     from decimal import Decimal
 
     from ulid import ULID
-
-    from tests.conftest import DepositMoney, OpenAccount
 
     account_id = ULID()
     # If these work, multiple calls worked correctly

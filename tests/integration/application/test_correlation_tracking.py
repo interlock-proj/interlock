@@ -12,12 +12,12 @@ from interlock.application.commands.middleware.context import (
 from interlock.application.events.processing import EventProcessor
 from interlock.context import get_context
 from interlock.routing import handles_event
-from tests.conftest import (
-    AccountOpened,
+from tests.fixtures.test_app.aggregates.bank_account import (
     BankAccount,
     DepositMoney,
-    MoneyDeposited,
+    AccountOpened,
     OpenAccount,
+    MoneyDeposited,
 )
 
 

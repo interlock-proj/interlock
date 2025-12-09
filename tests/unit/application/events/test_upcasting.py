@@ -205,7 +205,7 @@ class TestUpcastingPipeline:
         """Should register upcaster instance."""
         upcaster = AccountCreatedV1ToV2()
         upcaster_map.register_upcaster(upcaster)
-        pipeline = UpcastingPipeline(LazyUpcastingStrategy(), upcaster_map)
+        UpcastingPipeline(LazyUpcastingStrategy(), upcaster_map)
 
         assert AccountCreatedV1 in upcaster_map.upcasters
         assert upcaster in upcaster_map.upcasters[AccountCreatedV1]
@@ -213,7 +213,7 @@ class TestUpcastingPipeline:
     def test_register_upcaster_with_class(self, upcaster_map):
         """Should instantiate and register upcaster class."""
         upcaster_map.register_upcaster(AccountCreatedV1ToV2())
-        pipeline = UpcastingPipeline(LazyUpcastingStrategy(), upcaster_map)
+        UpcastingPipeline(LazyUpcastingStrategy(), upcaster_map)
 
         assert AccountCreatedV1 in upcaster_map.upcasters
         assert len(upcaster_map.upcasters[AccountCreatedV1]) == 1
@@ -223,7 +223,7 @@ class TestUpcastingPipeline:
         """Should support explicit type registration."""
         upcaster = AccountCreatedV1ToV2()
         upcaster_map.register_upcaster(upcaster)
-        pipeline = UpcastingPipeline(LazyUpcastingStrategy(), upcaster_map)
+        UpcastingPipeline(LazyUpcastingStrategy(), upcaster_map)
 
         assert AccountCreatedV1 in upcaster_map.upcasters
 

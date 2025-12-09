@@ -4,12 +4,12 @@ import pytest
 from ulid import ULID
 
 from interlock.application.commands.middleware import LoggingMiddleware
-from tests.conftest import (
+from tests.fixtures.test_app.aggregates.bank_account import (
     BankAccount,
     DepositMoney,
-    ExecutionTracker,
     OpenAccount,
 )
+from tests.conftest import ExecutionTracker
 
 
 @pytest.mark.asyncio

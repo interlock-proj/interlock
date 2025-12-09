@@ -1,9 +1,9 @@
 """Tests for ProcessorScenario."""
 
 from decimal import Decimal
+from typing import TYPE_CHECKING
 
 import pytest
-from pydantic import BaseModel
 
 from interlock.application.events.processing import EventProcessor
 from interlock.routing import handles_event
@@ -14,6 +14,9 @@ from tests.fixtures.test_app.aggregates.bank_account import (
     MoneyDeposited,
     MoneyWithdrawn,
 )
+
+if TYPE_CHECKING:
+    from pydantic import BaseModel
 
 
 class FailingProcessor(EventProcessor):
