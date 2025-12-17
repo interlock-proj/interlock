@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from logging import getLogger
+from typing import Protocol, runtime_checkable
 
 from ....domain import Command
 from ....routing import intercepts
@@ -8,14 +9,41 @@ from ..bus import CommandHandler, CommandMiddleware
 LOGGER = getLogger(__name__)
 
 
-class IdempotencyTrackedCommand(Command):
-    """Command that is tracked for idempotency.
+@runtime_checkable
+class HasIdempotencyKey(Protocol):
+    """Protocol for commands that have an idempotency key.
 
-    This command is used to track commands that have been processed.
-    It will store the command in the idempotency storage backend.
+    Commands can provide idempotency tracking by having an `idempotency_key`
+    attribute (field or property). The idempotency middleware will detect
+    this and use it to prevent duplicate processing.
+
+    Examples:
+        Field-based idempotency key:
+
+        >>> class DepositMoney(Command):
+        ...     amount: int
+        ...     idempotency_key: str
+
+        Property-based idempotency key (computed):
+
+        >>> class TransferMoney(Command):
+        ...     from_account_id: ULID
+        ...     to_account_id: ULID
+        ...     amount: int
+        ...
+        ...     @property
+        ...     def idempotency_key(self) -> str:
+        ...         return f"{self.from_account_id}-{self.to_account_id}-{self.amount}"
     """
 
-    idempotency_key: str
+    @property
+    def idempotency_key(self) -> str:
+        """The idempotency key for this command."""
+        ...
+
+
+# Backward compatibility alias
+IdempotencyTrackedCommand = HasIdempotencyKey
 
 
 class IdempotencyStorageBackend(ABC):
@@ -35,22 +63,50 @@ class IdempotencyStorageBackend(ABC):
         return NullIdempotencyStorageBackend()
 
     @abstractmethod
-    async def store_processed_command(self, command: IdempotencyTrackedCommand) -> None:
-        """Store the command as processed."""
+    async def store_idempotency_key(self, key: str) -> None:
+        """Store an idempotency key as processed."""
         ...
 
     @abstractmethod
-    async def has_processed_command(self, command: IdempotencyTrackedCommand) -> bool:
-        """Check if the command has been processed."""
+    async def has_idempotency_key(self, key: str) -> bool:
+        """Check if an idempotency key has been processed."""
         ...
 
 
 class IdempotencyMiddleware(CommandMiddleware):
     """Middleware that ensures commands are idempotent.
 
-    This middleware is used to ensure commands are idempotent.
-    It will store the command in the idempotency storage backend and
-    check if the command has been processed.
+    This middleware intercepts commands that have an `idempotency_key`
+    attribute (field or property) and ensures they are only processed once.
+
+    Commands without an idempotency_key are passed through unchanged.
+
+    Examples:
+        >>> app = (
+        ...     ApplicationBuilder()
+        ...     .register_dependency(IdempotencyStorageBackend, InMemoryIdempotencyStorageBackend)
+        ...     .register_middleware(IdempotencyMiddleware)
+        ...     .build()
+        ... )
+
+        Field-based key:
+
+        >>> class DepositMoney(Command):
+        ...     amount: int
+        ...     idempotency_key: str
+        ...
+        >>> await app.dispatch(DepositMoney(aggregate_id=id, amount=100, idempotency_key="dep-123"))
+
+        Property-based key:
+
+        >>> class TransferMoney(Command):
+        ...     from_account: ULID
+        ...     to_account: ULID
+        ...     amount: int
+        ...
+        ...     @property
+        ...     def idempotency_key(self) -> str:
+        ...         return f"{self.from_account}-{self.to_account}-{self.amount}"
     """
 
     __slots__ = ("idempotency_storage_backend",)
@@ -60,30 +116,45 @@ class IdempotencyMiddleware(CommandMiddleware):
 
     @intercepts
     async def ensure_idempotency(
-        self, command: IdempotencyTrackedCommand, next: CommandHandler
+        self, command: Command, next: CommandHandler
     ) -> None:
         """Check idempotency and process command if not processed.
 
+        Commands with an `idempotency_key` attribute are checked against
+        the storage backend. Commands without this attribute are passed
+        through unchanged.
+
         Args:
-            command: The command with idempotency tracking.
+            command: The command to check.
             next: The next handler in the chain.
         """
-        if await self.idempotency_storage_backend.has_processed_command(command):
+        # Check if command has idempotency tracking
+        if not isinstance(command, HasIdempotencyKey):
+            await next(command)
+            return
+
+        idempotency_key = command.idempotency_key
+
+        if await self.idempotency_storage_backend.has_idempotency_key(idempotency_key):
             LOGGER.warning(
                 "Skipping previously processed command",
-                extra={"idempotency_key": command.idempotency_key},
+                extra={"idempotency_key": idempotency_key},
             )
             return
+
         await next(command)
-        await self.idempotency_storage_backend.store_processed_command(command)
+        await self.idempotency_storage_backend.store_idempotency_key(idempotency_key)
 
 
 class InMemoryIdempotencyStorageBackend(IdempotencyStorageBackend):
     """In-memory implementation of the idempotency storage backend.
 
-    This backend is used to store idempotency keys for commands in
-    memory. It will store the idempotency key for a command and
-    return it when the command is dispatched.
+    This backend stores idempotency keys in memory. Suitable for
+    single-process applications and testing.
+
+    Note:
+        Keys are lost on application restart. For production use,
+        implement a persistent backend (Redis, database, etc.).
     """
 
     __slots__ = ("idempotency_keys",)
@@ -91,21 +162,21 @@ class InMemoryIdempotencyStorageBackend(IdempotencyStorageBackend):
     def __init__(self):
         self.idempotency_keys: set[str] = set()
 
-    async def store_processed_command(self, command: IdempotencyTrackedCommand) -> None:
-        self.idempotency_keys.add(command.idempotency_key)
+    async def store_idempotency_key(self, key: str) -> None:
+        self.idempotency_keys.add(key)
 
-    async def has_processed_command(self, command: IdempotencyTrackedCommand) -> bool:
-        return command.idempotency_key in self.idempotency_keys
+    async def has_idempotency_key(self, key: str) -> bool:
+        return key in self.idempotency_keys
 
 
 class NullIdempotencyStorageBackend(IdempotencyStorageBackend):
-    """A null implementation of the idempotency storage backend.
+    """A null implementation that never detects duplicates.
 
-    This backend is used to do nothing.
+    Use this to effectively disable idempotency checking.
     """
 
-    async def store_processed_command(self, command: IdempotencyTrackedCommand) -> None:
+    async def store_idempotency_key(self, key: str) -> None:
         pass
 
-    async def has_processed_command(self, command: IdempotencyTrackedCommand) -> bool:
+    async def has_idempotency_key(self, key: str) -> bool:
         return False

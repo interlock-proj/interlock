@@ -142,7 +142,9 @@ class EventProcessorExecutor(Generic[P]):
                 context_set = True
 
             try:
-                await self.processor.handle(event.data)
+                # Pass full event - processor.handle will extract payload for routing
+                # but pass wrapper to handlers that want it (annotated with Event[T])
+                await self.processor.handle(event)
             finally:
                 # Clear context only if we set it to prevent leakage
                 if context_set:

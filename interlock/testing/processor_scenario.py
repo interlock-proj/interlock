@@ -2,8 +2,10 @@ from collections.abc import Callable
 from typing import Any, Generic, TypeVar
 
 from pydantic import BaseModel
+from ulid import ULID
 
 from interlock.application.events import EventProcessor, Saga, SagaStateStore
+from interlock.domain import Event
 
 from .core import Scenario, StateMatches
 
@@ -38,7 +40,14 @@ class ProcessorScenario(Scenario[TProcessor], Generic[TProcessor]):
         self.processor = processor
 
     async def perform_actions(self) -> None:
-        for event in self.event_payloads:
+        # Wrap payloads in Event objects for handlers with Event[T] annotations
+        aggregate_id = ULID()  # Use a consistent aggregate ID for test events
+        for i, event_payload in enumerate(self.event_payloads, start=1):
+            event = Event(
+                aggregate_id=aggregate_id,
+                data=event_payload,
+                sequence_number=i,
+            )
             try:
                 await self.processor.handle(event)
             except Exception as e:
@@ -81,7 +90,14 @@ class SagaScenario(Scenario[TSagaState], Generic[TSaga, TSagaState]):
         self.state_store = saga.state_store
 
     async def perform_actions(self) -> None:
-        for event in self.event_payloads:
+        # Wrap payloads in Event objects for handlers with Event[T] annotations
+        aggregate_id = ULID()  # Use a consistent aggregate ID for test events
+        for i, event_payload in enumerate(self.event_payloads, start=1):
+            event = Event(
+                aggregate_id=aggregate_id,
+                data=event_payload,
+                sequence_number=i,
+            )
             try:
                 await self.saga.handle(event)
             except Exception as e:

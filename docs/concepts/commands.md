@@ -274,16 +274,18 @@ Without idempotency protection, a `DepositMoney` command retried twice could dou
 
 ### Idempotency Keys
 
-To enable idempotency tracking, extend `IdempotencyTrackedCommand` instead of `Command`:
+Add an `idempotency_key` field or property to any command to enable idempotency tracking:
 
 ```python
-from interlock.application.commands import IdempotencyTrackedCommand
+from interlock.domain import Command
 
-class DepositMoney(IdempotencyTrackedCommand):
+# Option 1: Field-based key (client provides explicitly)
+class DepositMoney(Command):
     """A deposit that can only be processed once."""
     amount: int
+    idempotency_key: str  # Required for idempotency
 
-# Create with an idempotency key
+# Create with an explicit idempotency key
 command = DepositMoney(
     aggregate_id=account_id,
     amount=100,
@@ -291,23 +293,39 @@ command = DepositMoney(
 )
 ```
 
-The `idempotency_key` is a string that uniquely identifies this logical operation. Common strategies:
+```python
+# Option 2: Property-based key (computed from command data)
+class TransferMoney(Command):
+    """A transfer that derives its idempotency key from its parameters."""
+    from_account: ULID
+    to_account: ULID
+    amount: int
+
+    @property
+    def idempotency_key(self) -> str:
+        # Same transfer attempt always produces the same key
+        return f"{self.from_account}-{self.to_account}-{self.amount}"
+```
+
+The `idempotency_key` can be a field (explicit) or a property (computed). Common strategies:
 
 | Strategy | Example | Use When |
 |----------|---------|----------|
 | **Request ID** | `"req-a1b2c3"` | Each API request has a unique ID |
 | **Transaction reference** | `"txn-20240115-001"` | External systems provide references |
-| **Content hash** | `hash(user_id + amount + date)` | Dedupe based on operation content |
+| **Computed from data** | `f"{user}-{amount}-{date}"` | Dedupe based on operation content |
 | **UUID from client** | `str(uuid4())` | Client generates before submission |
 
 ### IdempotencyMiddleware
 
-The `IdempotencyMiddleware` intercepts commands and checks if they've been processed:
+The `IdempotencyMiddleware` intercepts commands that have an `idempotency_key` and checks if they've been processed:
 
 ```mermaid
 flowchart LR
-    CMD[Command] --> MW{Idempotency<br/>Middleware}
-    MW -->|New key| PROC[Process Command]
+    CMD[Command] --> CHK{Has<br/>idempotency_key?}
+    CHK -->|No| PROC[Process Command]
+    CHK -->|Yes| MW{Check<br/>Storage}
+    MW -->|New key| PROC
     MW -->|Seen key| SKIP[Skip Silently]
     PROC --> STORE[Store Key]
 ```
@@ -337,6 +355,8 @@ When a command with a previously-seen `idempotency_key` arrives, the middleware:
 2. Logs a warning
 3. Returns successfully (without processing)
 
+Commands without an `idempotency_key` attribute pass through unchanged.
+
 ### Storage Backends
 
 The `IdempotencyStorageBackend` interface is pluggable. Interlock provides:
@@ -353,13 +373,18 @@ The middleware stores the key **after** successful processing:
 ```python
 # Pseudocode of middleware behavior
 async def ensure_idempotency(self, command, next):
-    if await backend.has_processed_command(command):
+    # Commands without idempotency_key pass through
+    if not hasattr(command, 'idempotency_key'):
+        await next(command)
+        return
+    
+    if await backend.has_idempotency_key(command.idempotency_key):
         return  # Skip duplicate
     
     await next(command)  # Process (may raise)
     
     # Only stored if processing succeeded
-    await backend.store_processed_command(command)
+    await backend.store_idempotency_key(command.idempotency_key)
 ```
 
 This means:
@@ -370,10 +395,10 @@ This means:
 
 ### Commands Without Idempotency
 
-Regular `Command` subclasses bypass idempotency checking entirely:
+Commands without an `idempotency_key` bypass idempotency checking entirely:
 
 ```python
-# Not tracked - each dispatch is processed
+# No idempotency_key - each dispatch is processed
 class DepositMoney(Command):
     amount: int
 
@@ -382,7 +407,7 @@ await app.dispatch(DepositMoney(aggregate_id=id, amount=100))
 # Both deposits are processed - balance increases by 200
 ```
 
-Use `IdempotencyTrackedCommand` when:
+Add `idempotency_key` to your commands when:
 
 - Commands arrive via unreliable transports (webhooks, queues)
 - Clients may retry on timeout

@@ -12,7 +12,8 @@ from typing import TYPE_CHECKING, ClassVar
 
 from pydantic import BaseModel
 
-from ....routing import setup_event_handling
+from ....domain import Event
+from ....routing import _WANTS_EVENT_WRAPPER_ATTR, setup_event_handling
 
 if TYPE_CHECKING:
     from ....routing import MessageRouter
@@ -119,18 +120,25 @@ class EventProcessor:
         super().__init_subclass__(**kwargs)
         cls._event_router = setup_event_handling(cls)
 
-    async def handle(self, event: BaseModel) -> object:
+    async def handle(self, event: Event[BaseModel] | BaseModel) -> object:
         """Route an event to its registered handler method.
 
         This is called by EventProcessorExecutor for each event. It uses
         the routing table to find the appropriate handler method based on
         the event type and invokes it.
 
+        Handlers can receive either:
+        - Just the event payload (annotated as `def handle(self, event: MyEvent)`)
+        - The full Event wrapper (annotated as `def handle(self, event: Event[MyEvent])`)
+
         This method is async to support async event handler methods. If the
         handler method returns a coroutine, it will be properly awaited.
 
         Args:
-            event: The event data to handle (typically from Event.data)
+            event: Either the Event wrapper or just the payload.
+                When called from EventProcessorExecutor, this is the full
+                Event wrapper. The router will pass the appropriate value
+                to handlers based on their type annotation.
 
         Returns:
             The return value of the handler method (typically None)
@@ -138,7 +146,14 @@ class EventProcessor:
         Raises:
             KeyError: If no handler is registered for the event type
         """
-        result = self._event_router.route(self, event)
+        # Determine if we got a wrapped Event or just a payload
+        if isinstance(event, Event):
+            # Route based on the payload type, but pass the wrapper to handlers that want it
+            result = self._event_router.route(self, event.data, event_wrapper=event)
+        else:
+            # Just a payload (backward compatibility / testing)
+            result = self._event_router.route(self, event)
+
         # If the handler is async, await the coroutine
         if inspect.iscoroutine(result):
             return await result

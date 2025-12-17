@@ -2,11 +2,14 @@ import inspect
 from abc import ABC, abstractmethod
 from collections.abc import Callable
 from functools import singledispatch
-from typing import Any, TypeVar
+from typing import Any, TypeVar, get_args, get_origin
 
 from pydantic import BaseModel
 
 T = TypeVar("T")
+
+# Marker for handlers that want the Event wrapper, not just payload
+_WANTS_EVENT_WRAPPER_ATTR = "_wants_event_wrapper"
 
 
 class DefaultHandler(ABC):
@@ -64,8 +67,11 @@ class IgnoreHandler(DefaultHandler):
         pass
 
 
-def _extract_handler_type(func: Callable[..., object], param_index: int = 1) -> type:
+def _extract_handler_type(func: Callable[..., object], param_index: int = 1) -> tuple[type, bool]:
     """Extract the type annotation from a handler method.
+
+    For event handlers, this also detects if the handler wants the Event wrapper
+    (annotated as `Event[T]`) or just the payload (annotated as `T`).
 
     Args:
         func: The handler method to inspect.
@@ -73,11 +79,15 @@ def _extract_handler_type(func: Callable[..., object], param_index: int = 1) -> 
             (0=self, 1=first arg, etc.)
 
     Returns:
-        The type annotation for the specified parameter.
+        A tuple of (payload_type, wants_wrapper):
+        - payload_type: The inner type to route on (e.g., MoneyDeposited)
+        - wants_wrapper: True if annotated as Event[T], False if just T
 
     Raises:
         ValueError: If the parameter lacks a type annotation.
     """
+    annotation = None
+
     # Fast path: use __annotations__ directly if available
     if hasattr(func, "__annotations__"):
         annotations = func.__annotations__
@@ -90,23 +100,53 @@ def _extract_handler_type(func: Callable[..., object], param_index: int = 1) -> 
                 )
             param_name = param_names[param_index]
             if param_name in annotations:
-                return annotations[param_name]
+                annotation = annotations[param_name]
 
     # Fallback to inspect if __annotations__ unavailable
-    sig = inspect.signature(func)
-    params = list(sig.parameters.values())
+    if annotation is None:
+        sig = inspect.signature(func)
+        params = list(sig.parameters.values())
 
-    if len(params) <= param_index:
-        raise ValueError(f"Handler {func.__name__} must have at least {param_index + 1} parameters")
+        if len(params) <= param_index:
+            raise ValueError(f"Handler {func.__name__} must have at least {param_index + 1} parameters")
 
-    param = params[param_index]
+        param = params[param_index]
 
-    if param.annotation is inspect.Parameter.empty:
-        raise ValueError(
-            f"Handler {func.__name__} parameter '{param.name}' must have a type annotation"
-        )
+        if param.annotation is inspect.Parameter.empty:
+            raise ValueError(
+                f"Handler {func.__name__} parameter '{param.name}' must have a type annotation"
+            )
+        annotation = param.annotation
 
-    return param.annotation
+    # Check if annotation is Event[T]
+    from .domain import Event  # Import here to avoid circular dependency
+
+    # First try standard typing generics
+    origin = get_origin(annotation)
+    if origin is Event:
+        # Handler wants the Event wrapper - extract inner type
+        args = get_args(annotation)
+        if args:
+            return (args[0], True)
+        else:
+            raise ValueError(
+                f"Handler {func.__name__}: Event type must have a type argument, e.g., Event[MoneyDeposited]"
+            )
+
+    # For Pydantic models, Event[T] creates a new class at runtime
+    # Check if the annotation is a Pydantic model subclassing Event
+    if isinstance(annotation, type) and issubclass(annotation, Event):
+        # Check for Pydantic's generic metadata
+        metadata = getattr(annotation, "__pydantic_generic_metadata__", None)
+        if metadata:
+            pydantic_origin = metadata.get("origin")
+            pydantic_args = metadata.get("args", ())
+            if pydantic_origin is Event and pydantic_args:
+                # Handler wants the Event wrapper - extract inner type
+                return (pydantic_args[0], True)
+
+    # Handler wants just the payload
+    return (annotation, False)
 
 
 class MessageRouter:
@@ -114,6 +154,9 @@ class MessageRouter:
 
     This class uses singledispatch to route messages (commands, events, etc.)
     to registered handler methods based on their type annotations.
+
+    For event handlers, supports passing either the event payload or the full
+    Event wrapper based on the handler's type annotation.
     """
 
     __slots__ = ("_dispatch",)
@@ -139,28 +182,49 @@ class MessageRouter:
         self,
         message_type: type,
         handler: Callable[[object, object], object],
+        wants_wrapper: bool = False,
     ) -> None:
         """Register a handler for a specific message type.
 
         Args:
             message_type: The message class this handler processes.
             handler: The method to call when handling this message type.
+            wants_wrapper: If True, handler receives Event wrapper via
+                'event_wrapper' kwarg. If False, receives just the payload.
         """
         # Register directly - singledispatch will handle the lookup
         # efficiently. We create a minimal wrapper to swap argument
         # order and pass through any additional arguments
-        self._dispatch.register(message_type)(
-            lambda msg, inst, *args, h=handler, **kwargs: h(inst, msg, *args, **kwargs)
-        )
+        if wants_wrapper:
+            # Handler wants the Event wrapper - pass it via event_wrapper kwarg
+            def wrapper(msg: object, inst: object, *args: Any, h: Any = handler, **kwargs: Any) -> object:
+                # The event_wrapper kwarg contains the full Event object
+                event_wrapper = kwargs.pop("event_wrapper", None)
+                if event_wrapper is not None:
+                    return h(inst, event_wrapper, *args, **kwargs)
+                else:
+                    # Fallback if no wrapper provided (e.g., testing)
+                    return h(inst, msg, *args, **kwargs)
+
+            self._dispatch.register(message_type)(wrapper)
+        else:
+            # Handler wants just the payload - strip event_wrapper if present
+            def payload_wrapper(msg: object, inst: object, *args: Any, h: Any = handler, **kwargs: Any) -> object:
+                kwargs.pop("event_wrapper", None)  # Remove if present
+                return h(inst, msg, *args, **kwargs)
+
+            self._dispatch.register(message_type)(payload_wrapper)
 
     def route(self, instance: Any, message: Any, *args: Any, **kwargs: Any) -> object:
         """Route a message to its registered handler.
 
         Args:
             instance: The instance to call the handler on (self).
-            message: The message to route.
+            message: The message to route (the payload for events).
             *args: Additional positional arguments to pass to handler.
             **kwargs: Additional keyword arguments to pass to handler.
+                For events, pass event_wrapper=<Event> to provide the
+                full wrapper to handlers that want it.
 
         Returns:
             The result of the handler method.
@@ -196,9 +260,10 @@ class HandlerDecorator:
         Returns:
             The decorated method with metadata attached.
         """
-        message_type = _extract_handler_type(func, param_index=1)
+        message_type, wants_wrapper = _extract_handler_type(func, param_index=1)
         setattr(func, self.type_attr, message_type)
         setattr(func, self.marker_attr, True)
+        setattr(func, _WANTS_EVENT_WRAPPER_ATTR, wants_wrapper)
         return func
 
 
@@ -289,7 +354,8 @@ def setup_routing(
                 # Check if it has the marker attribute
                 if getattr(value, marker_attr, None):
                     message_type = getattr(value, type_attr)
-                    router.register(message_type, value)
+                    wants_wrapper = getattr(value, _WANTS_EVENT_WRAPPER_ATTR, False)
+                    router.register(message_type, value, wants_wrapper=wants_wrapper)
             except AttributeError:
                 # Not a method or doesn't have the attributes
                 continue

@@ -30,6 +30,7 @@ Event processors extend the `EventProcessor` base class and use `@handles_event`
 
 ```python
 from interlock.application.events import EventProcessor
+from interlock.domain import Event
 from interlock.routing import handles_event
 
 class AccountBalanceProjection(EventProcessor):
@@ -39,25 +40,26 @@ class AccountBalanceProjection(EventProcessor):
         self.repository = repository
 
     @handles_event
-    async def on_account_opened(self, event: AccountOpened) -> None:
+    async def on_account_opened(self, event: Event[AccountOpened]) -> None:
+        # Use Event[T] to access aggregate_id from the wrapper
         await self.repository.create(
             account_id=event.aggregate_id,
-            owner=event.owner_name,
-            balance=event.initial_deposit
+            owner=event.data.owner_name,
+            balance=event.data.initial_deposit
         )
 
     @handles_event
-    async def on_money_deposited(self, event: MoneyDeposited) -> None:
+    async def on_money_deposited(self, event: Event[MoneyDeposited]) -> None:
         await self.repository.increment(
             event.aggregate_id, 
-            event.amount
+            event.data.amount
         )
 
     @handles_event
-    async def on_money_withdrawn(self, event: MoneyWithdrawn) -> None:
+    async def on_money_withdrawn(self, event: Event[MoneyWithdrawn]) -> None:
         await self.repository.decrement(
             event.aggregate_id, 
-            event.amount
+            event.data.amount
         )
 ```
 
@@ -76,6 +78,45 @@ async def on_deposit(self, event: MoneyDeposited) -> None: ...
 @handles_event
 async def handle_money_deposited(self, event: MoneyDeposited) -> None: ...
 ```
+
+### Accessing Event Metadata
+
+By default, handlers receive just the event payload. To access event metadata (like `aggregate_id`, `timestamp`, `correlation_id`), use the `Event[T]` annotation:
+
+```python
+from interlock.domain import Event
+
+class AccountBalanceProjection(EventProcessor):
+    # Payload-only: simple, clean, but no metadata access
+    @handles_event
+    async def on_deposit_simple(self, event: MoneyDeposited) -> None:
+        # Must include aggregate_id in payload if needed
+        await self.repository.increment(event.account_id, event.amount)
+
+    # Event wrapper: full access to metadata
+    @handles_event
+    async def on_withdrawal_with_metadata(self, event: Event[MoneyWithdrawn]) -> None:
+        # Access any metadata from the wrapper
+        await self.repository.record_withdrawal(
+            aggregate_id=event.aggregate_id,      # From wrapper
+            amount=event.data.amount,             # Payload is in event.data
+            timestamp=event.timestamp,            # Metadata
+            sequence=event.sequence_number        # Metadata
+        )
+```
+
+Use `Event[T]` when you need:
+
+- **`aggregate_id`** without duplicating it in every event payload
+- **`timestamp`** for time-based logic
+- **`sequence_number`** for ordering or idempotency
+- **`correlation_id`/`causation_id`** for tracing
+
+Use the plain type (`T`) when:
+
+- You only need the event data itself
+- You've included necessary IDs in the event payload
+- You want simpler handler signatures
 
 ## Common Use Cases
 

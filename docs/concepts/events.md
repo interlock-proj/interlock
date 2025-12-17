@@ -82,18 +82,41 @@ Every event automatically includes:
 | `correlation_id` | `ULID \| None` | Links related events across a workflow |
 | `causation_id` | `ULID \| None` | The command that caused this event |
 
-!!! note "When to Include `aggregate_id` in Event Payloads"
-    The `Event` wrapper's `aggregate_id` metadata is **not accessible** to event processors and sagas—they only receive the `event.data` payload.
-    
-    - **Aggregate-only events**: Don't need `aggregate_id` in the payload (the aggregate knows its own ID)
-    - **Events consumed by processors/sagas**: Should include `aggregate_id` (or similar) in the payload if the consumer needs to know which aggregate emitted the event
-    
-    ```python
-    # For processors that need to know the source aggregate
-    class MoneyDeposited(BaseModel):
-        account_id: ULID  # Include for processor access
-        amount: int
-    ```
+### Accessing Event Metadata in Processors
+
+Event processors can receive either just the event payload or the full `Event` wrapper, depending on their type annotation:
+
+```python
+class AccountBalanceProjection(EventProcessor):
+    # Option 1: Receive just the payload (traditional)
+    @handles_event
+    async def on_deposit_payload(self, event: MoneyDeposited) -> None:
+        # 'event' is the MoneyDeposited payload only
+        # If you need aggregate_id, it must be in the payload
+        await self.repo.increment(event.account_id, event.amount)
+
+    # Option 2: Receive the full Event wrapper
+    @handles_event
+    async def on_withdrawal_with_metadata(self, event: Event[MoneyWithdrawn]) -> None:
+        # 'event' is the full Event wrapper with all metadata
+        await self.repo.decrement(
+            event.aggregate_id,      # Access from wrapper
+            event.data.amount,       # Payload is in event.data
+            event.timestamp          # Other metadata available too
+        )
+```
+
+Use the `Event[T]` annotation when you need:
+
+- The `aggregate_id` without duplicating it in the payload
+- Event metadata like `timestamp`, `sequence_number`, `correlation_id`
+- The full tracing context
+
+Use the plain type annotation (`T`) when:
+
+- You only need the event data itself
+- You want simpler code and don't need metadata
+- You've already included necessary IDs in the payload
 
 ## Naming Conventions
 
