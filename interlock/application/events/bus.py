@@ -85,7 +85,8 @@ class EventBus:
         This method coordinates event loading:
         1. Retrieve events from the event store
         2. Upcast events to current schema versions (based on strategy)
-        3. Return complete Event objects ready for aggregate reconstruction
+        3. Optionally rewrite upcasted events back to store (eager migration)
+        4. Return complete Event objects ready for aggregate reconstruction
 
         Args:
             aggregate_id: Unique identifier of the aggregate to load events for
@@ -98,4 +99,17 @@ class EventBus:
             current schema versions, including all metadata (timestamp, etc.).
         """
         events = await self.store.load_events(aggregate_id, min_version)
-        return await self.upcasting_pipeline.read_upcast(events)
+        upcasted_events = await self.upcasting_pipeline.read_upcast(events)
+
+        # Gradual migration: rewrite events that were upcasted
+        if self.upcasting_pipeline.upcasting_strategy.should_rewrite_on_load():
+            # Find events whose data type changed (i.e., were actually upcasted)
+            changed_events = [
+                upcasted
+                for original, upcasted in zip(events, upcasted_events)
+                if type(original.data) is not type(upcasted.data)
+            ]
+            if changed_events:
+                await self.store.rewrite_events(changed_events)
+
+        return upcasted_events

@@ -70,6 +70,27 @@ class EventStore(ABC):
         """
         ...
 
+    @abstractmethod
+    async def rewrite_events(self, events: list[Event[Any]]) -> None:
+        """Rewrite existing events in place for schema migration.
+
+        This method updates existing events in the store with new data,
+        typically after upcasting. It's used by the EagerUpcastingStrategy
+        to gradually migrate the event store to new schemas.
+
+        Args:
+            events: Events to rewrite. Each event's aggregate_id and
+                sequence_number identify which stored event to update.
+                The event data (and potentially type) may have changed.
+
+        Note:
+            This operation intentionally modifies historical events.
+            Use with caution as it breaks strict event immutability.
+            The event's id, aggregate_id, sequence_number, and timestamp
+            should remain unchanged; only the data payload is updated.
+        """
+        ...
+
 
 class InMemoryEventStore(EventStore):
     """Dictionary-based in-memory event store for testing.
@@ -144,3 +165,20 @@ class InMemoryEventStore(EventStore):
             for event in self.by_aggregate_id[aggregate_id]
             if event.sequence_number >= min_version
         ]
+
+    async def rewrite_events(self, events: list[Event[Any]]) -> None:
+        """Rewrite existing events in place.
+
+        Updates events in the in-memory store by matching aggregate_id
+        and sequence_number.
+
+        Args:
+            events: Events with updated data to write back.
+        """
+        for event in events:
+            stream = self.by_aggregate_id[event.aggregate_id]
+            # Find and replace the event at this sequence number
+            for i, stored_event in enumerate(stream):
+                if stored_event.sequence_number == event.sequence_number:
+                    stream[i] = event
+                    break
