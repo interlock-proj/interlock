@@ -43,7 +43,6 @@ async def test_convention_based_discovers_commands():
 
     from ulid import ULID
 
-
     account_id = ULID()
     # If these work, commands were discovered
     await app.dispatch(OpenAccount(aggregate_id=account_id, owner="Bob"))

@@ -1,7 +1,6 @@
 """Tests for Event[T] wrapper annotation in event handlers."""
 
 from decimal import Decimal
-from typing import TYPE_CHECKING
 
 import pytest
 from pydantic import BaseModel
@@ -11,9 +10,6 @@ from interlock.application.events.processing import EventProcessor
 from interlock.domain import Event
 from interlock.routing import handles_event
 from interlock.testing import ProcessorScenario
-
-if TYPE_CHECKING:
-    pass
 
 
 # Test event types
@@ -213,4 +209,3 @@ async def test_wrapper_annotation_access_to_metadata():
     assert received.correlation_id == correlation_id
     assert received.causation_id == causation_id
     assert received.data.amount == Decimal("100.00")
-

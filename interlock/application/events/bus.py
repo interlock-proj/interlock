@@ -106,7 +106,7 @@ class EventBus:
             # Find events whose data type changed (i.e., were actually upcasted)
             changed_events = [
                 upcasted
-                for original, upcasted in zip(events, upcasted_events)
+                for original, upcasted in zip(events, upcasted_events, strict=True)
                 if type(original.data) is not type(upcasted.data)
             ]
             if changed_events:

@@ -108,7 +108,9 @@ def _extract_handler_type(func: Callable[..., object], param_index: int = 1) -> 
         params = list(sig.parameters.values())
 
         if len(params) <= param_index:
-            raise ValueError(f"Handler {func.__name__} must have at least {param_index + 1} parameters")
+            raise ValueError(
+                f"Handler {func.__name__} must have at least {param_index + 1} parameters"
+            )
 
         param = params[param_index]
 
@@ -130,7 +132,8 @@ def _extract_handler_type(func: Callable[..., object], param_index: int = 1) -> 
             return (args[0], True)
         else:
             raise ValueError(
-                f"Handler {func.__name__}: Event type must have a type argument, e.g., Event[MoneyDeposited]"
+                f"Handler {func.__name__}: Event type must have a type"
+                " argument, e.g., Event[MoneyDeposited]"
             )
 
     # For Pydantic models, Event[T] creates a new class at runtime
@@ -197,7 +200,9 @@ class MessageRouter:
         # order and pass through any additional arguments
         if wants_wrapper:
             # Handler wants the Event wrapper - pass it via event_wrapper kwarg
-            def wrapper(msg: object, inst: object, *args: Any, h: Any = handler, **kwargs: Any) -> object:
+            def wrapper(
+                msg: object, inst: object, *args: Any, h: Any = handler, **kwargs: Any
+            ) -> object:
                 # The event_wrapper kwarg contains the full Event object
                 event_wrapper = kwargs.pop("event_wrapper", None)
                 if event_wrapper is not None:
@@ -209,7 +214,9 @@ class MessageRouter:
             self._dispatch.register(message_type)(wrapper)
         else:
             # Handler wants just the payload - strip event_wrapper if present
-            def payload_wrapper(msg: object, inst: object, *args: Any, h: Any = handler, **kwargs: Any) -> object:
+            def payload_wrapper(
+                msg: object, inst: object, *args: Any, h: Any = handler, **kwargs: Any
+            ) -> object:
                 kwargs.pop("event_wrapper", None)  # Remove if present
                 return h(inst, msg, *args, **kwargs)
 

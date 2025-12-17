@@ -234,9 +234,7 @@ class Application:
         from ..testing import ProcessorScenario
 
         # Resolve the processor from the DI container
-        processor = self.contextual_binding.container_for(processor_type).resolve(
-            processor_type
-        )
+        processor = self.contextual_binding.container_for(processor_type).resolve(processor_type)
         return ProcessorScenario(processor)
 
     def saga_scenario(

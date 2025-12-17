@@ -13,11 +13,11 @@ from interlock.application.events.processing import EventProcessor
 from interlock.context import get_context
 from interlock.routing import handles_event
 from tests.fixtures.test_app.aggregates.bank_account import (
+    AccountOpened,
     BankAccount,
     DepositMoney,
-    AccountOpened,
-    OpenAccount,
     MoneyDeposited,
+    OpenAccount,
 )
 
 

@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING, ClassVar
 from pydantic import BaseModel
 
 from ....domain import Event
-from ....routing import _WANTS_EVENT_WRAPPER_ATTR, setup_event_handling
+from ....routing import setup_event_handling
 
 if TYPE_CHECKING:
     from ....routing import MessageRouter

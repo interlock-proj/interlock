@@ -337,12 +337,10 @@ class BalanceRepository(ABC):
     """Abstract repository for balance tracking."""
 
     @abstractmethod
-    def get_balance(self, account_id: ULID) -> Decimal:
-        ...
+    def get_balance(self, account_id: ULID) -> Decimal: ...
 
     @abstractmethod
-    def set_balance(self, account_id: ULID, balance: Decimal) -> None:
-        ...
+    def set_balance(self, account_id: ULID, balance: Decimal) -> None: ...
 
 
 class InMemoryBalanceRepository(BalanceRepository):
@@ -385,6 +383,4 @@ async def test_app_processor_scenario_with_di():
     async with app.processor_scenario(BalanceProjection) as scenario:
         scenario.given(
             MoneyDeposited(amount=Decimal("100.00")),
-        ).should_have_state(
-            lambda p: isinstance(p.repository, InMemoryBalanceRepository)
-        )
+        ).should_have_state(lambda p: isinstance(p.repository, InMemoryBalanceRepository))

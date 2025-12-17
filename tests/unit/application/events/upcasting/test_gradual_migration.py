@@ -15,7 +15,6 @@ from interlock.application.events.upcasting import (
 )
 from interlock.domain import Event
 
-
 # Test event types
 
 
@@ -237,4 +236,3 @@ async def test_no_rewrite_when_no_upcasting_needed(event_store, eager_bus, aggre
     # Store should be unchanged
     raw_events = await event_store.load_events(aggregate_id, min_version=0)
     assert raw_events[0].data.source == "original"
-

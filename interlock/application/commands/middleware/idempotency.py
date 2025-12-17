@@ -115,9 +115,7 @@ class IdempotencyMiddleware(CommandMiddleware):
         self.idempotency_storage_backend = idempotency_storage_backend
 
     @intercepts
-    async def ensure_idempotency(
-        self, command: Command, next: CommandHandler
-    ) -> None:
+    async def ensure_idempotency(self, command: Command, next: CommandHandler) -> None:
         """Check idempotency and process command if not processed.
 
         Commands with an `idempotency_key` attribute are checked against

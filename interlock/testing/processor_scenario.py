@@ -4,7 +4,7 @@ from typing import Any, Generic, TypeVar
 from pydantic import BaseModel
 from ulid import ULID
 
-from interlock.application.events import EventProcessor, Saga, SagaStateStore
+from interlock.application.events import EventProcessor, Saga
 from interlock.domain import Event
 
 from .core import Scenario, StateMatches
