@@ -1,4 +1,4 @@
-.PHONY: format lint typecheck test test-unit test-integration quality check ci clean help
+.PHONY: format lint typecheck test test-unit test-integration quality check ci clean help docs-serve docs-build docs-deploy
 
 help:
 	@echo "Available targets:"
@@ -12,6 +12,9 @@ help:
 	@echo "  check            - Run all quality checks and tests"
 	@echo "  ci               - Full CI suite (same as check)"
 	@echo "  clean            - Remove generated files"
+	@echo "  docs-serve       - Serve documentation locally with hot reload"
+	@echo "  docs-build       - Build documentation site"
+	@echo "  docs-deploy      - Deploy documentation to GitHub Pages"
 
 format:
 	uv run ruff format .
@@ -48,5 +51,16 @@ clean:
 	rm -rf htmlcov
 	rm -rf .coverage
 	rm -rf coverage.xml
+	rm -rf site
 	find . -type d -name __pycache__ -exec rm -rf {} +
 	find . -type f -name "*.pyc" -delete
+
+# Documentation
+docs-serve:
+	uv run --extra docs mkdocs serve
+
+docs-build:
+	uv run --extra docs mkdocs build
+
+docs-deploy:
+	uv run --extra docs mkdocs gh-deploy --force

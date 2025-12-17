@@ -1,9 +1,14 @@
 import asyncio
 from collections.abc import Callable
 from types import TracebackType
-from typing import Any, Protocol, TypeVar, runtime_checkable
+from typing import TYPE_CHECKING, Any, Protocol, TypeVar, runtime_checkable
+
+from ulid import ULID
 
 from ..domain import Aggregate, Command
+
+if TYPE_CHECKING:
+    from ..testing import AggregateScenario, ProcessorScenario, SagaScenario
 from .aggregates import (
     AggregateCacheBackend,
     AggregateFactory,
@@ -170,6 +175,96 @@ class Application:
             for executor, subscription in zip(executors, subscriptions, strict=False)
         ]
         await asyncio.gather(*tasks)
+
+    def aggregate_scenario(
+        self,
+        aggregate_type: type[Aggregate],
+        aggregate_id: ULID | None = None,
+    ) -> "AggregateScenario":
+        """Create a test scenario for an aggregate.
+
+        This provides a consistent testing API across all Interlock components.
+        Aggregates don't have constructor dependencies, so this is equivalent
+        to creating an AggregateScenario directly.
+
+        Args:
+            aggregate_type: The aggregate class to test.
+            aggregate_id: Optional specific ID for the aggregate.
+
+        Returns:
+            An AggregateScenario ready for Given-When-Then testing.
+
+        Example:
+            >>> async with app.aggregate_scenario(BankAccount) as scenario:
+            ...     scenario.given_no_events()
+            ...     scenario.when(DepositMoney(aggregate_id=scenario.aggregate_id, amount=100))
+            ...     scenario.should_emit(MoneyDeposited)
+        """
+        from ..testing import AggregateScenario
+
+        return AggregateScenario(aggregate_type, aggregate_id)
+
+    def processor_scenario(
+        self,
+        processor_type: type[EventProcessor],
+    ) -> "ProcessorScenario":
+        """Create a test scenario for an event processor with DI.
+
+        The processor is instantiated using the application's dependency
+        injection container, so all registered dependencies are automatically
+        injected.
+
+        Args:
+            processor_type: The event processor class to test.
+
+        Returns:
+            A ProcessorScenario ready for Given-Then testing.
+
+        Example:
+            >>> app = (
+            ...     ApplicationBuilder()
+            ...     .register_dependency(AccountBalanceRepository, InMemoryAccountBalanceRepository)
+            ...     .register_event_processor(AccountBalanceProjection)
+            ...     .build()
+            ... )
+            >>> async with app.processor_scenario(AccountBalanceProjection) as scenario:
+            ...     scenario.given(MoneyDeposited(account_id=id, amount=100))
+            ...     scenario.should_have_state(lambda p: p.repository.get_balance(id) == 100)
+        """
+        from ..testing import ProcessorScenario
+
+        # Resolve the processor from the DI container
+        processor = self.contextual_binding.container_for(processor_type).resolve(
+            processor_type
+        )
+        return ProcessorScenario(processor)
+
+    def saga_scenario(
+        self,
+        saga_type: type,
+    ) -> "SagaScenario":
+        """Create a test scenario for a saga with DI.
+
+        The saga is instantiated using the application's dependency
+        injection container, so all registered dependencies are automatically
+        injected.
+
+        Args:
+            saga_type: The saga class to test.
+
+        Returns:
+            A SagaScenario ready for Given-Then testing.
+
+        Example:
+            >>> async with app.saga_scenario(OrderFulfillmentSaga) as scenario:
+            ...     scenario.given(OrderPlaced(order_id="123"))
+            ...     scenario.should_have_state("123", lambda s: s.status == "processing")
+        """
+        from ..testing import SagaScenario
+
+        # Resolve the saga from the DI container
+        saga = self.contextual_binding.container_for(saga_type).resolve(saga_type)
+        return SagaScenario(saga)
 
 
 # At the API level, the application builder simply provides a fluent API for

@@ -4,6 +4,7 @@ from decimal import Decimal
 
 import pytest
 
+from interlock.application.events.processing import SagaStateStore
 from interlock.testing import SagaScenario
 from tests.fixtures.test_app import (
     MoneyTransferSaga,
@@ -13,10 +14,15 @@ from tests.fixtures.test_app import (
 )
 
 
+def create_saga() -> MoneyTransferSaga:
+    """Create a saga with an in-memory state store for testing."""
+    return MoneyTransferSaga(SagaStateStore.in_memory())
+
+
 @pytest.mark.asyncio
 async def test_saga_handles_single_event():
     """Test that saga handles a single event correctly."""
-    scenario = SagaScenario(MoneyTransferSaga)
+    scenario = SagaScenario(create_saga())
 
     transfer_id = "transfer-001"
 
@@ -35,7 +41,7 @@ async def test_saga_handles_single_event():
 @pytest.mark.asyncio
 async def test_saga_creates_initial_state():
     """Test that saga creates initial state correctly."""
-    scenario = SagaScenario(MoneyTransferSaga)
+    scenario = SagaScenario(create_saga())
 
     transfer_id = "transfer-002"
 
@@ -63,7 +69,7 @@ async def test_saga_creates_initial_state():
 @pytest.mark.asyncio
 async def test_saga_handles_completion():
     """Test that saga handles transfer completion."""
-    scenario = SagaScenario(MoneyTransferSaga)
+    scenario = SagaScenario(create_saga())
 
     transfer_id = "transfer-003"
 
@@ -85,7 +91,7 @@ async def test_saga_handles_completion():
 @pytest.mark.asyncio
 async def test_saga_handles_failure():
     """Test that saga handles transfer failure."""
-    scenario = SagaScenario(MoneyTransferSaga)
+    scenario = SagaScenario(create_saga())
 
     transfer_id = "transfer-004"
 
@@ -111,7 +117,7 @@ async def test_saga_handles_failure():
 @pytest.mark.asyncio
 async def test_saga_multiple_instances():
     """Test saga can handle multiple concurrent instances."""
-    scenario = SagaScenario(MoneyTransferSaga)
+    scenario = SagaScenario(create_saga())
 
     transfer_1 = "transfer-005"
     transfer_2 = "transfer-006"
@@ -140,7 +146,7 @@ async def test_saga_multiple_instances():
 @pytest.mark.asyncio
 async def test_saga_given_no_events():
     """Test saga with no events."""
-    scenario = SagaScenario(MoneyTransferSaga)
+    scenario = SagaScenario(create_saga())
 
     transfer_id = "transfer-007"
 
@@ -152,7 +158,7 @@ async def test_saga_given_no_events():
 @pytest.mark.asyncio
 async def test_saga_chainable_given():
     """Test that given() is chainable."""
-    scenario = SagaScenario(MoneyTransferSaga)
+    scenario = SagaScenario(create_saga())
 
     transfer_id = "transfer-008"
 
@@ -173,7 +179,7 @@ async def test_saga_chainable_given():
 @pytest.mark.asyncio
 async def test_saga_multiple_state_checks():
     """Test multiple state predicates for the same saga."""
-    scenario = SagaScenario(MoneyTransferSaga)
+    scenario = SagaScenario(create_saga())
 
     transfer_id = "transfer-009"
 
@@ -195,7 +201,7 @@ async def test_saga_multiple_state_checks():
 async def test_saga_state_predicate_fails():
     """Test that failed state predicate raises AssertionError."""
     with pytest.raises(AssertionError, match="should match state"):
-        scenario = SagaScenario(MoneyTransferSaga)
+        scenario = SagaScenario(create_saga())
 
         transfer_id = "transfer-010"
 
@@ -217,7 +223,7 @@ async def test_saga_state_predicate_fails():
 @pytest.mark.asyncio
 async def test_saga_without_context_manager():
     """Test saga scenario without using context manager."""
-    scenario = SagaScenario(MoneyTransferSaga)
+    scenario = SagaScenario(create_saga())
 
     transfer_id = "transfer-011"
 
@@ -238,7 +244,7 @@ async def test_saga_with_context_manager():
     """Test saga scenario with async context manager."""
     transfer_id = "transfer-012"
 
-    async with SagaScenario(MoneyTransferSaga) as scenario:
+    async with SagaScenario(create_saga()) as scenario:
         scenario.given(
             TransferInitiated(
                 saga_id=transfer_id,
@@ -264,7 +270,7 @@ async def test_saga_handles_errors():
 @pytest.mark.asyncio
 async def test_saga_deletes_state_on_failure():
     """Test that saga deletes state when transfer fails."""
-    scenario = SagaScenario(MoneyTransferSaga)
+    scenario = SagaScenario(create_saga())
 
     transfer_id = "transfer-013"
 
@@ -284,7 +290,7 @@ async def test_saga_deletes_state_on_failure():
 @pytest.mark.asyncio
 async def test_saga_state_persists_across_events():
     """Test that saga state persists across multiple events."""
-    scenario = SagaScenario(MoneyTransferSaga)
+    scenario = SagaScenario(create_saga())
 
     transfer_id = "transfer-014"
 
@@ -308,7 +314,7 @@ async def test_saga_state_persists_across_events():
 @pytest.mark.asyncio
 async def test_saga_tracks_completion_count():
     """Test that saga tracks completion count correctly."""
-    scenario = SagaScenario(MoneyTransferSaga)
+    scenario = SagaScenario(create_saga())
 
     scenario.given(
         TransferInitiated(
@@ -335,7 +341,7 @@ async def test_saga_tracks_completion_count():
 @pytest.mark.asyncio
 async def test_saga_tracks_failure_count():
     """Test that saga tracks failure count correctly."""
-    scenario = SagaScenario(MoneyTransferSaga)
+    scenario = SagaScenario(create_saga())
 
     scenario.given(
         TransferInitiated(
@@ -356,7 +362,7 @@ async def test_saga_tracks_failure_count():
 @pytest.mark.asyncio
 async def test_saga_complex_state_validation():
     """Test complex state validation with multiple conditions."""
-    scenario = SagaScenario(MoneyTransferSaga)
+    scenario = SagaScenario(create_saga())
 
     transfer_id = "transfer-015"
 
@@ -384,7 +390,7 @@ async def test_saga_complex_state_validation():
 @pytest.mark.asyncio
 async def test_saga_with_decimal_precision():
     """Test that saga handles decimal precision correctly."""
-    scenario = SagaScenario(MoneyTransferSaga)
+    scenario = SagaScenario(create_saga())
 
     transfer_id = "transfer-016"
 
@@ -405,7 +411,7 @@ async def test_saga_scenario_with_should_raise():
     """Test saga scenario with error expectations."""
     # This would require a saga that raises errors
     # Our current sagas don't raise errors, so we'll create a basic test
-    scenario = SagaScenario(MoneyTransferSaga)
+    scenario = SagaScenario(create_saga())
 
     transfer_id = "transfer-017"
 
@@ -425,7 +431,7 @@ async def test_saga_scenario_with_should_raise():
 @pytest.mark.asyncio
 async def test_saga_state_updated_correctly():
     """Test that saga state is updated through the lifecycle."""
-    scenario = SagaScenario(MoneyTransferSaga)
+    scenario = SagaScenario(create_saga())
 
     transfer_id = "transfer-018"
 
@@ -447,7 +453,7 @@ async def test_saga_state_updated_correctly():
     assert not state.completed
 
     # Complete the transfer
-    scenario2 = SagaScenario(MoneyTransferSaga)
+    scenario2 = SagaScenario(create_saga())
     scenario2.state_store = scenario.state_store  # Share state store
     scenario2.saga.state_store = scenario.state_store  # Share state store
 
@@ -464,7 +470,7 @@ async def test_saga_state_updated_correctly():
 @pytest.mark.asyncio
 async def test_saga_handles_out_of_order_events():
     """Test saga behavior with events arriving out of order."""
-    scenario = SagaScenario(MoneyTransferSaga)
+    scenario = SagaScenario(create_saga())
 
     transfer_id = "transfer-019"
 
@@ -489,7 +495,7 @@ async def test_saga_handles_out_of_order_events():
 @pytest.mark.asyncio
 async def test_saga_given_no_events_clears_existing():
     """Test that given_no_events() clears previously set events."""
-    scenario = SagaScenario(MoneyTransferSaga)
+    scenario = SagaScenario(create_saga())
 
     transfer_id = "transfer-020"
 

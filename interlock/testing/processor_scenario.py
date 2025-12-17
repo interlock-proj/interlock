@@ -15,13 +15,27 @@ PROCESSOR_STATE_KEY = "processor_state"
 
 
 class ProcessorScenario(Scenario[TProcessor], Generic[TProcessor]):
-    def __init__(
-        self,
-        processor_type: type[TProcessor],
-    ):
+    """A scenario for testing an event processor.
+
+    This scenario allows you to test an event processor by:
+    - Given a list of events to process
+    - Then a list of expectations are met (state assertions)
+
+    Use via Application.processor_scenario() for automatic DI:
+
+        >>> async with app.processor_scenario(AccountBalanceProjection) as scenario:
+        ...     scenario.given(MoneyDeposited(...))
+        ...     scenario.should_have_state(lambda p: p.repo.get_balance(id) == 100)
+
+    Or instantiate directly for simple processors:
+
+        >>> async with ProcessorScenario(SimpleProcessor()) as scenario:
+        ...     scenario.given(SomeEvent()).should_have_state(lambda p: p.count == 1)
+    """
+
+    def __init__(self, processor: TProcessor):
         super().__init__()
-        self.processor_type = processor_type
-        self.processor = processor_type()
+        self.processor = processor
 
     async def perform_actions(self) -> None:
         for event in self.event_payloads:
@@ -41,14 +55,30 @@ class ProcessorScenario(Scenario[TProcessor], Generic[TProcessor]):
 
 
 class SagaScenario(Scenario[TSagaState], Generic[TSaga, TSagaState]):
-    def __init__(
-        self,
-        saga_type: type[TSaga],
-    ):
+    """A scenario for testing a saga.
+
+    This scenario allows you to test a saga by:
+    - Given a list of events to process
+    - Then a list of expectations are met (state assertions)
+
+    Use via Application.saga_scenario() for automatic DI:
+
+        >>> async with app.saga_scenario(OrderSaga) as scenario:
+        ...     scenario.given(OrderPlaced(order_id="123"))
+        ...     scenario.should_have_state("123", lambda s: s.status == "placed")
+
+    Or instantiate directly:
+
+        >>> saga = OrderSaga(SagaStateStore.in_memory())
+        >>> async with SagaScenario(saga) as scenario:
+        ...     scenario.given(OrderPlaced(order_id="123"))
+        ...     scenario.should_have_state("123", lambda s: s.status == "placed")
+    """
+
+    def __init__(self, saga: TSaga):
         super().__init__()
-        self.saga_type = saga_type
-        self.state_store = SagaStateStore.in_memory()
-        self.saga = saga_type(self.state_store)
+        self.saga = saga
+        self.state_store = saga.state_store
 
     async def perform_actions(self) -> None:
         for event in self.event_payloads:
