@@ -1,3 +1,4 @@
+import inspect
 from collections.abc import Callable, Coroutine
 from functools import reduce
 from typing import TYPE_CHECKING, Any, ClassVar
@@ -6,7 +7,7 @@ from ...domain import Aggregate, Command
 from ..aggregates import AggregateRepository
 
 if TYPE_CHECKING:
-    from ..routing import MessageRouter
+    from ...routing import MessageRouter
 
 
 CommandHandler = Callable[[Command], Coroutine[Any, Any, None]]
@@ -56,7 +57,7 @@ class CommandMiddleware:
         # If router returned None (IgnoreHandler), forward to next
         if result is None:
             await next(command)
-        else:
+        elif inspect.isawaitable(result):
             # Router returned coroutine (async interceptor), await it
             await result
 
@@ -64,7 +65,7 @@ class CommandMiddleware:
 class CommandToAggregateMap:
     @staticmethod
     def from_aggregates(
-        aggregates: list[Aggregate],
+        aggregates: list[type[Aggregate]],
     ) -> "CommandToAggregateMap":
         map = CommandToAggregateMap()
         for aggregate in aggregates:

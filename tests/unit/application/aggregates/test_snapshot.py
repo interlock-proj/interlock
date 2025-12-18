@@ -97,7 +97,7 @@ async def test_null_backend_load_returns_none():
     result = await backend.load_snapshot(ULID())
     assert result is None
 
-    result_with_version = await backend.load_snapshot(ULID(), version=10)
+    result_with_version = await backend.load_snapshot(ULID(), intended_version=10)
     assert result_with_version is None
 
 

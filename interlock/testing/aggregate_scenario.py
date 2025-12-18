@@ -1,5 +1,5 @@
 from collections.abc import Callable
-from typing import Any, Generic, TypeVar
+from typing import Any, Generic, TypeVar, cast
 
 from pydantic import BaseModel
 from ulid import ULID
@@ -79,8 +79,10 @@ class AggregateScenario(Scenario[A], Generic[A]):
         return self
 
     def should_have_state(self, predicate: Callable[[A], bool]) -> "AggregateScenario[A]":
-        self.expectations.append(StateMatches(self.aggregate_id, predicate))
+        self.expectations.append(
+            StateMatches(self.aggregate_id, cast("Callable[[A | None], bool]", predicate))
+        )
         return self
 
-    def get_state(self, state_key: Any) -> A | None:
+    async def get_state(self, state_key: Any) -> A | None:
         return self.aggregate if state_key == self.aggregate_id else None

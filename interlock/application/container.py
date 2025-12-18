@@ -36,7 +36,7 @@ class FactoryDependency(Dependency[T]):
     def resolve(self, container: "DependencyContainer") -> T:
         return self.factory(**self.get_dependencies(container))
 
-    def get_dependencies(self, container: "DependencyContainer") -> dict[type, Any]:
+    def get_dependencies(self, container: "DependencyContainer") -> dict[str, Any]:
         return {
             k: container.resolve(v.annotation)
             for k, v in inspect.signature(self.factory).parameters.items()
@@ -69,7 +69,7 @@ class DependencyContainer:
     def child(self) -> "DependencyContainer":
         return DependencyContainer(self)
 
-    def all_resolving(self) -> list[type[T]]:
+    def all_resolving(self) -> list[type]:
         return [
             k for k in self.dependencies if getattr(self.dependencies[k], "_resolving", False)
         ] + (self.parent.all_resolving() if self.parent else [])
@@ -118,7 +118,7 @@ class DependencyContainer:
 class ContextualBinding:
     def __init__(self, container: "DependencyContainer"):
         self.container = container
-        self.type_to_child_container: dict[type, DependencyContainer] = OrderedDict()
+        self.type_to_child_container: dict[type | None, DependencyContainer] = OrderedDict()
 
     def container_for(self, context: type | None = None) -> "DependencyContainer":
         if context not in self.type_to_child_container:
@@ -136,7 +136,7 @@ class ContextualBinding:
         return [
             c
             for c in chain(self.type_to_child_container.keys(), self.container.dependencies.keys())
-            if issubclass(c, base)
+            if c is not None and issubclass(c, base)
         ]
 
     def resolve_all(self) -> list[T]:

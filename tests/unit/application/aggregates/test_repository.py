@@ -17,6 +17,7 @@ from interlock.application.aggregates.repository.snapshot import (
     AggregateSnapshotStrategy,
     SnapshotAfterN,
 )
+from interlock.application.events import EventBus
 from interlock.domain.exceptions import ConcurrencyError
 from tests.fixtures.test_app.aggregates.bank_account import (
     BankAccount,
@@ -236,8 +237,9 @@ async def test_repository_handles_concurrency_error(
     """Test repository invalidates cache on concurrency error."""
 
     # Create mock event bus that raises ConcurrencyError
-    class FailingEventBus:
-        def __init__(self, real_bus):
+    class FailingEventBus(EventBus):
+        def __init__(self, real_bus: EventBus):
+            super().__init__(real_bus.store, real_bus.delivery, real_bus.upcasting_pipeline)
             self.real_bus = real_bus
             self.calls = 0
 

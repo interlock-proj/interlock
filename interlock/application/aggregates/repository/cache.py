@@ -39,21 +39,21 @@ class CacheStrategy(ABC):
 
 
 class NullAggregateCacheBackend(AggregateCacheBackend):
-    async def get_aggregate(self, _: ULID) -> Optional["Aggregate"]:
+    async def get_aggregate(self, aggregate_id: ULID) -> Optional["Aggregate"]:
         return None
 
-    async def set_aggregate(self, _: "Aggregate") -> None:
+    async def set_aggregate(self, aggregate: "Aggregate") -> None:
         pass
 
-    async def remove_aggregate(self, _: ULID) -> None:
+    async def remove_aggregate(self, aggregate_id: ULID) -> None:
         pass
 
 
 class AlwaysCache(CacheStrategy):
-    def should_cache(self, _: "Aggregate") -> bool:
+    def should_cache(self, aggregate: "Aggregate") -> bool:
         return True
 
 
 class NeverCache(CacheStrategy):
-    def should_cache(self, _: "Aggregate") -> bool:
+    def should_cache(self, aggregate: "Aggregate") -> bool:
         return False

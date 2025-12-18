@@ -259,9 +259,12 @@ class Application:
             ...     scenario.should_have_state("123", lambda s: s.status == "processing")
         """
         from ..testing import SagaScenario
+        from .events.processing import Saga
 
         # Resolve the saga from the DI container
         saga = self.contextual_binding.container_for(saga_type).resolve(saga_type)
+        if not isinstance(saga, Saga):
+            raise TypeError(f"Expected Saga instance, got {type(saga).__name__}")
         return SagaScenario(saga)
 
 
@@ -486,9 +489,9 @@ class ApplicationBuilder:
         container.register_singleton(processor_type)
         container.register_singleton(EventProcessorExecutor)
         if catchup_condition:
-            container.register_singleton(CatchupCondition, catchup_condition)
+            container.register_singleton(CatchupCondition, lambda: catchup_condition)
         if catchup_strategy:
-            container.register_singleton(CatchupStrategy, catchup_strategy)
+            container.register_singleton(CatchupStrategy, lambda: catchup_strategy)
         return self
 
     def register_upcaster(

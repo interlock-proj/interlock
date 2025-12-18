@@ -4,11 +4,12 @@ from types import TracebackType
 from typing import (
     Any,
     Generic,
-    Self,
     TypeVar,
+    cast,
 )
 
 from pydantic import BaseModel
+from typing_extensions import Self
 
 from interlock.domain import Event
 
@@ -18,7 +19,7 @@ TState = TypeVar("TState", bound=BaseModel)
 class Result(Generic[TState]):
     def __init__(
         self,
-        events: list[Event],
+        events: list[BaseModel],
         errors: list[Exception],
         states: Mapping[Any, TState | None] | None = None,
     ):
@@ -26,20 +27,27 @@ class Result(Generic[TState]):
         self.errors = errors
         self.states = states if states is not None else {}
 
+    def _get_event_data(self, event: BaseModel) -> BaseModel:
+        """Extract event data from Event wrapper or return the event itself."""
+        if isinstance(event, Event):
+            # Event.data is the payload which is a BaseModel
+            return cast("BaseModel", event.data)
+        return event
+
     def contains_event_of_type(self, event_type: type[BaseModel]) -> bool:
-        return any(isinstance(event.data, event_type) for event in self.events)
+        return any(isinstance(self._get_event_data(event), event_type) for event in self.events)
 
     def contains_event(self, payload: BaseModel) -> bool:
-        return any(event.data == payload for event in self.events)
+        return any(self._get_event_data(event) == payload for event in self.events)
 
     def contains_error_of_type(self, error_type: type[Exception]) -> bool:
         return any(isinstance(error, error_type) for error in self.errors)
 
-    def state_matches(self, state_key: Any, predicate: Callable[[TState], bool]) -> bool:
+    def state_matches(self, state_key: Any, predicate: Callable[[TState | None], bool]) -> bool:
         if state_key in self.states:
-            return predicate(self.states[state_key])
-        else:
-            return False
+            state = self.states[state_key]
+            return predicate(state)
+        return False
 
 
 class Expectation(ABC):
@@ -101,7 +109,7 @@ class DoesNotHaveEvents(Expectation):
 
 
 class StateMatches(Expectation):
-    def __init__(self, state_key: Any, predicate: Callable[[TState], bool]):
+    def __init__(self, state_key: Any, predicate: Callable[[TState | None], bool]):
         self.state_key = state_key
         self.predicate = predicate
 
@@ -170,7 +178,7 @@ class Scenario(ABC, Generic[TState]):
         exc_value: BaseException | None,
         traceback: TracebackType | None,
     ) -> None:
-        if exc_type is not None:
+        if exc_type is not None and exc_value is not None:
             raise exc_value
         else:
             await self.execute_scenario()

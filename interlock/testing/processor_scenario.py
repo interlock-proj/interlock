@@ -1,5 +1,5 @@
 from collections.abc import Callable
-from typing import Any, Generic, TypeVar
+from typing import Any, Generic, TypeVar, cast
 
 from pydantic import BaseModel
 from ulid import ULID
@@ -9,14 +9,17 @@ from interlock.domain import Event
 
 from .core import Scenario, StateMatches
 
+# Type alias for predicates that can receive None
+NullablePredicate = Callable[[Any | None], bool]
+
 TProcessor = TypeVar("TProcessor", bound=EventProcessor)
 TSagaState = TypeVar("TSagaState", bound=BaseModel)
-TSaga = TypeVar("TSaga", bound=Saga[TSagaState])
+TSaga = TypeVar("TSaga", bound="Saga[Any]")
 
 PROCESSOR_STATE_KEY = "processor_state"
 
 
-class ProcessorScenario(Scenario[TProcessor], Generic[TProcessor]):
+class ProcessorScenario(Scenario[Any], Generic[TProcessor]):
     """A scenario for testing an event processor.
 
     This scenario allows you to test an event processor by:
@@ -56,7 +59,9 @@ class ProcessorScenario(Scenario[TProcessor], Generic[TProcessor]):
     def should_have_state(
         self, predicate: Callable[[TProcessor], bool]
     ) -> "ProcessorScenario[TProcessor]":
-        self.expectations.append(StateMatches(PROCESSOR_STATE_KEY, predicate))
+        self.expectations.append(
+            StateMatches(PROCESSOR_STATE_KEY, cast("NullablePredicate", predicate))
+        )
         return self
 
     async def get_state(self, state_key: Any) -> TProcessor | None:
@@ -105,9 +110,10 @@ class SagaScenario(Scenario[TSagaState], Generic[TSaga, TSagaState]):
 
     def should_have_state(
         self, saga_id: str, predicate: Callable[[TSagaState], bool]
-    ) -> "SagaScenario[TSaga]":
-        self.expectations.append(StateMatches(saga_id, predicate))
+    ) -> "SagaScenario[TSaga, TSagaState]":
+        self.expectations.append(StateMatches(saga_id, cast("NullablePredicate", predicate)))
         return self
 
     async def get_state(self, state_key: Any) -> TSagaState | None:
-        return await self.state_store.load(state_key)
+        result = await self.state_store.load(state_key)
+        return cast("TSagaState | None", result)

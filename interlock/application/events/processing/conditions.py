@@ -104,11 +104,11 @@ class Never(CatchupCondition):
         ... )
     """
 
-    def should_catchup(self, _: Lag) -> bool:
+    def should_catchup(self, lag: Lag) -> bool:
         """Always returns False - catchup never triggered.
 
         Args:
-            _: Lag metrics (ignored)
+            lag: Lag metrics (ignored)
 
         Returns:
             False

@@ -35,12 +35,13 @@ def extract_upcaster_types(
         (<class 'OldEvent'>, <class 'NewEvent'>)
     """
     # Look for __orig_bases__ which contains the generic parent with type parameters
-    if not hasattr(upcaster_class, "__orig_bases__"):
+    orig_bases = getattr(upcaster_class, "__orig_bases__", None)
+    if orig_bases is None:
         raise ValueError(
             f"Cannot extract types from {upcaster_class.__name__}: no __orig_bases__ found"
         )
 
-    for base in upcaster_class.__orig_bases__:
+    for base in orig_bases:
         # Check if this base is EventUpcaster or a subclass of it
         origin = getattr(base, "__origin__", None)
         if origin is not None:

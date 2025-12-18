@@ -127,11 +127,11 @@ class InMemoryEventTransport(EventTransport):
         """Initialize an empty in-memory transport."""
         self.events_in_order: list[Event[Any]] = []
 
-    async def subscribe(self, _: str) -> EventSubscription:
+    async def subscribe(self, identifier: str) -> EventSubscription:
         """Create a subscription to the global event stream.
 
         Args:
-            _: Identifier is ignored - all subscriptions share the global stream
+            identifier: Identifier is ignored - all subscriptions share the global stream
 
         Returns:
             A new InMemoryEventSubscription starting at the beginning of the stream

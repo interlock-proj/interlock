@@ -344,10 +344,11 @@ class SubsequentStepExecutor(SagaStepExecutor):
     async def execute_handler(self, saga: Saga[Any], event: BaseModel, saga_id: str) -> Any:
         """Execute handler with state parameter."""
         state = await saga.state_store.load(saga_id)
+        handler_name = getattr(self.handler_func, "__name__", repr(self.handler_func))
         if state is None:
             raise ValueError(
                 f"State not found for saga {saga_id}. "
-                f"Handler {self.handler_func.__name__} expects state "
+                f"Handler {handler_name} expects state "
                 f"parameter but no state exists."
             )
         return await self.handler_func(saga, event, state)
@@ -434,7 +435,8 @@ def saga_step(
     """
 
     def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
-        resolved_step_name = step_name or func.__name__
+        func_name = getattr(func, "__name__", repr(func))
+        resolved_step_name = step_name or func_name
         variant = SagaStepExecutor.executor_from_function(func)
         executor = variant(resolved_step_name, saga_id, func)
 

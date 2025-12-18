@@ -67,7 +67,7 @@ class IgnoreHandler(DefaultHandler):
         pass
 
 
-def _extract_handler_type(func: Callable[..., object], param_index: int = 1) -> tuple[type, bool]:
+def _extract_handler_type(func: Callable[..., Any], param_index: int = 1) -> tuple[type, bool]:
     """Extract the type annotation from a handler method.
 
     For event handlers, this also detects if the handler wants the Event wrapper
@@ -87,20 +87,19 @@ def _extract_handler_type(func: Callable[..., object], param_index: int = 1) -> 
         ValueError: If the parameter lacks a type annotation.
     """
     annotation = None
+    func_name = getattr(func, "__name__", repr(func))
 
     # Fast path: use __annotations__ directly if available
-    if hasattr(func, "__annotations__"):
-        annotations = func.__annotations__
-        if annotations:
-            # Get parameter names without creating signature object
-            param_names = func.__code__.co_varnames
-            if len(param_names) <= param_index:
-                raise ValueError(
-                    f"Handler {func.__name__} must have at least {param_index + 1} parameters"
-                )
-            param_name = param_names[param_index]
-            if param_name in annotations:
-                annotation = annotations[param_name]
+    annotations = getattr(func, "__annotations__", None)
+    code = getattr(func, "__code__", None)
+    if annotations and code:
+        # Get parameter names without creating signature object
+        param_names = code.co_varnames
+        if len(param_names) <= param_index:
+            raise ValueError(f"Handler {func_name} must have at least {param_index + 1} parameters")
+        param_name = param_names[param_index]
+        if param_name in annotations:
+            annotation = annotations[param_name]
 
     # Fallback to inspect if __annotations__ unavailable
     if annotation is None:
@@ -108,15 +107,13 @@ def _extract_handler_type(func: Callable[..., object], param_index: int = 1) -> 
         params = list(sig.parameters.values())
 
         if len(params) <= param_index:
-            raise ValueError(
-                f"Handler {func.__name__} must have at least {param_index + 1} parameters"
-            )
+            raise ValueError(f"Handler {func_name} must have at least {param_index + 1} parameters")
 
         param = params[param_index]
 
         if param.annotation is inspect.Parameter.empty:
             raise ValueError(
-                f"Handler {func.__name__} parameter '{param.name}' must have a type annotation"
+                f"Handler {func_name} parameter '{param.name}' must have a type annotation"
             )
         annotation = param.annotation
 
@@ -132,7 +129,7 @@ def _extract_handler_type(func: Callable[..., object], param_index: int = 1) -> 
             return (args[0], True)
         else:
             raise ValueError(
-                f"Handler {func.__name__}: Event type must have a type"
+                f"Handler {func_name}: Event type must have a type"
                 " argument, e.g., Event[MoneyDeposited]"
             )
 

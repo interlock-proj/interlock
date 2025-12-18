@@ -95,7 +95,7 @@ class AggregateSnapshotStorageBackend(ABC):
 
 
 class NeverSnapshot(AggregateSnapshotStrategy):
-    def should_snapshot(self, _: "Aggregate") -> bool:
+    def should_snapshot(self, aggregate: "Aggregate") -> bool:
         return False
 
 
@@ -119,13 +119,13 @@ class SnapshotAfterTime(AggregateSnapshotStrategy):
 class NullAggregateSnapshotStorageBackend(AggregateSnapshotStorageBackend):
     """A snapshot backend that does not store any snapshots."""
 
-    async def save_snapshot(self, _: "Aggregate") -> None:
+    async def save_snapshot(self, aggregate: "Aggregate") -> None:
         pass
 
     async def load_snapshot(
         self,
-        _: ULID,
-        version: int | None = None,
+        aggregate_id: ULID,
+        intended_version: int | None = None,
     ) -> Optional["Aggregate"]:
         return None
 
