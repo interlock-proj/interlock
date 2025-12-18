@@ -359,23 +359,28 @@ infrastructure:
 ```python
 from interlock.application.events import EventStore
 from interlock.domain import Event
+from ulid import ULID
 
 class MyCustomEventStore(EventStore):
-    async def append(
+    async def save_events(
         self, 
-        aggregate_id: ULID, 
         events: list[Event], 
         expected_version: int
     ) -> None:
         # Persist events to your storage
+        # Use events[0].aggregate_id to get the aggregate
         ...
 
-    async def load(
+    async def load_events(
         self, 
         aggregate_id: ULID, 
-        from_version: int = 0
+        min_version: int
     ) -> list[Event]:
         # Load events from your storage
+        ...
+
+    async def rewrite_events(self, events: list[Event]) -> None:
+        # Update existing events in place (for schema migration)
         ...
 ```
 

@@ -88,14 +88,14 @@ Event processors can receive either just the event payload or the full `Event` w
 
 ```python
 class AccountBalanceProjection(EventProcessor):
-    # Option 1: Receive just the payload (traditional)
+    # Option 1: Receive just the payload
     @handles_event
     async def on_deposit_payload(self, event: MoneyDeposited) -> None:
         # 'event' is the MoneyDeposited payload only
-        # If you need aggregate_id, it must be in the payload
-        await self.repo.increment(event.account_id, event.amount)
+        # Use this when you don't need aggregate_id or metadata
+        await self.log_deposit(event.amount)
 
-    # Option 2: Receive the full Event wrapper
+    # Option 2: Receive the full Event wrapper (recommended)
     @handles_event
     async def on_withdrawal_with_metadata(self, event: Event[MoneyWithdrawn]) -> None:
         # 'event' is the full Event wrapper with all metadata
@@ -276,15 +276,14 @@ Build read models and trigger side effects:
 
 ```python
 class MoneyDeposited(BaseModel):
-    account_id: ULID  # Included for processor access
     amount: int
 
 class AccountBalanceProjection(EventProcessor):
     @handles_event
-    async def on_deposit(self, event: MoneyDeposited) -> None:
+    async def on_deposit(self, event: Event[MoneyDeposited]) -> None:
         await self.repository.increment_balance(
-            event.account_id,  # Access from payload, not wrapper
-            event.amount
+            event.aggregate_id,  # Access from wrapper
+            event.data.amount
         )
 ```
 

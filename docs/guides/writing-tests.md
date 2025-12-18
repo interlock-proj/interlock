@@ -39,7 +39,7 @@ async def test_deposit_emits_event():
 async def test_multiple_deposits():
     async with AggregateScenario(BankAccount) as scenario:
         scenario \
-            .given(MoneyDeposited(amount=100, account_aggregate_id=scenario.aggregate_id)) \
+            .given(MoneyDeposited(amount=100)) \
             .when(DepositMoney(aggregate_id=scenario.aggregate_id, amount=50)) \
             .should_have_state(lambda acc: acc.balance.amount == 150)
 ```
@@ -55,9 +55,7 @@ Check aggregate state after command execution:
 async def test_balance_after_operations():
     async with AggregateScenario(BankAccount) as scenario:
         scenario \
-            .given(
-                MoneyDeposited(amount=100, account_aggregate_id=scenario.aggregate_id)
-            ) \
+            .given(MoneyDeposited(amount=100)) \
             .when(WithdrawMoney(aggregate_id=scenario.aggregate_id, amount=30)) \
             .should_emit(MoneyWithdrawn) \
             .should_have_state(lambda acc: acc.balance.amount == 70)
@@ -77,12 +75,11 @@ async def test_projection_tracks_balance():
         .build()
     )
     
-    account_id = ULID()
     async with app.processor_scenario(AccountBalanceProjection) as scenario:
         scenario \
-            .given(MoneyDeposited(account_aggregate_id=account_id, amount=100)) \
+            .given(MoneyDeposited(amount=100)) \
             .should_have_state(
-                lambda p: p.repository.get_balance(account_id) == 100
+                lambda p: p.repository.get_balance(scenario.aggregate_id) == 100
             )
 ```
 

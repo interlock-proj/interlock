@@ -135,21 +135,26 @@ Implement `AggregateSnapshotStorageBackend` for your storage:
 from interlock.application.aggregates import AggregateSnapshotStorageBackend
 from interlock.domain import Aggregate
 from ulid import ULID
+from typing import TypeVar
+
+T = TypeVar("T", bound=Aggregate)
 
 class PostgresSnapshotBackend(AggregateSnapshotStorageBackend):
-    def __init__(self, connection_pool):
+    def __init__(self, connection_pool, aggregate_type: type[Aggregate]):
         self.pool = connection_pool
+        self.aggregate_type = aggregate_type
     
     async def save_snapshot(self, aggregate: Aggregate) -> None:
         async with self.pool.acquire() as conn:
             await conn.execute(
                 """
-                INSERT INTO snapshots (aggregate_id, version, data)
-                VALUES ($1, $2, $3)
+                INSERT INTO snapshots (aggregate_id, aggregate_type, version, data)
+                VALUES ($1, $2, $3, $4)
                 ON CONFLICT (aggregate_id) DO UPDATE
-                SET version = $2, data = $3
+                SET version = $3, data = $4
                 """,
                 str(aggregate.id),
+                type(aggregate).__name__,
                 aggregate.version,
                 aggregate.model_dump_json()
             )
@@ -165,15 +170,8 @@ class PostgresSnapshotBackend(AggregateSnapshotStorageBackend):
                 str(aggregate_id)
             )
             if row and (intended_version is None or row['version'] <= intended_version):
-                return Aggregate.model_validate_json(row['data'])
+                return self.aggregate_type.model_validate_json(row['data'])
             return None
-    
-    async def list_aggregate_ids_by_type(
-        self, 
-        aggregate_type: type[Aggregate]
-    ) -> list[ULID]:
-        # Implementation for listing all aggregate IDs of a type
-        ...
 ```
 
 ## Caching

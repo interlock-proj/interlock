@@ -40,14 +40,14 @@ There is no special event class that you need to inherit from.
 from pydantic import BaseModel
 
 class MoneyDeposited(BaseModel):
-    account_aggregate_id: ULID
     amount: int
 ```
 
 !!! note "Events don't need an aggregate_id"
-    In this example, we do include the `account_aggregate_id` field.
-    However, unlike commands, event payloads don't need to specify which aggregate they belong to.
-    The framework tracks this automatically when events are applied to the appropriate aggregate.
+    Unlike commands, event payloads don't need to specify which aggregate they belong to.
+    The framework wraps your event data in an `Event` object that includes the `aggregate_id` 
+    and other metadata automatically. Event processors can access this via `Event[MoneyDeposited]` 
+    type annotations if needed.
 
 ## Fixing Our Command Handler
 
@@ -56,8 +56,8 @@ Instead of directly mutating state, command handlers should **emit events**:
 ```python hl_lines="4"
 @handles_command
 def handle_deposit_money(self, command: DepositMoney) -> None:
-    # Don't mutate directly—apply an event instead!
-    self.emit(MoneyDeposited(amount=command.amount, account_aggregate_id=self.id))
+    # Don't mutate directly—emit an event instead!
+    self.emit(MoneyDeposited(amount=command.amount))
 ```
 
 The `emit()` method does two things:
@@ -79,9 +79,8 @@ def apply_money_deposited(self, event: MoneyDeposited) -> None:
 
 Let's put it all together:
 
-```python hl_lines="12-14 23-26 28-30"
+```python hl_lines="12-13 22-25 27-29"
 from pydantic import BaseModel, Field
-from ulid import ULID
 from interlock.domain import Aggregate
 from interlock.routing import handles_command, applies_event
 
@@ -94,7 +93,6 @@ class Balance(BaseModel):
 
 class MoneyDeposited(BaseModel):
     amount: int
-    account_aggregate_id: ULID
 
 class BankAccount(Aggregate):
     balance: Balance = Field(default_factory=Balance)
@@ -105,7 +103,7 @@ class BankAccount(Aggregate):
 
     @handles_command
     def handle_deposit_money(self, command: DepositMoney) -> None:
-        event = MoneyDeposited(amount=command.amount, account_aggregate_id=self.id)
+        event = MoneyDeposited(amount=command.amount)
         self.emit(event)  # (2)!
 
     @applies_event
@@ -182,7 +180,7 @@ Or test behavior that depends on prior events:
 async def test_multiple_deposits():
     async with AggregateScenario(BankAccount) as scenario:
         scenario \
-            .given(MoneyDeposited(amount=100, account_aggregate_id=scenario.aggregate_id)) \
+            .given(MoneyDeposited(amount=100)) \
             .when(DepositMoney(aggregate_id=scenario.aggregate_id, amount=50)) \
             .should_emit(MoneyDeposited) \
             .should_have_state(lambda acc: acc.balance.amount == 150)

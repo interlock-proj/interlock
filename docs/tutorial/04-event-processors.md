@@ -74,26 +74,22 @@ Now our tests are clean and focused on behavior:
 
 ```python
 async def test_tracks_balance_after_deposit(app):
-    account_id = ULID()
-    
     async with app.processor_scenario(AccountBalanceProjection) as scenario:  # (1)!
         scenario \
-            .given(MoneyDeposited(account_aggregate_id=account_id, amount=100)) \
+            .given(MoneyDeposited(amount=100)) \
             .should_have_state(
-                lambda p: p.repository.get_balance(account_id) == 100
+                lambda p: p.repository.get_balance(scenario.aggregate_id) == 100
             )
 
 async def test_accumulates_multiple_deposits(app):
-    account_id = ULID()
-    
     async with app.processor_scenario(AccountBalanceProjection) as scenario:
         scenario \
             .given(
-                MoneyDeposited(account_aggregate_id=account_id, amount=100),
-                MoneyDeposited(account_aggregate_id=account_id, amount=50),
+                MoneyDeposited(amount=100),
+                MoneyDeposited(amount=50),
             ) \
             .should_have_state(
-                lambda p: p.repository.get_balance(account_id) == 150
+                lambda p: p.repository.get_balance(scenario.aggregate_id) == 150
             )
 ```
 
@@ -105,6 +101,7 @@ Now let's implement the processor to make our tests pass:
 
 ```python
 from interlock.application.events import EventProcessor
+from interlock.domain import Event
 from interlock.routing import handles_event
 
 class AccountBalanceProjection(EventProcessor):
@@ -114,13 +111,17 @@ class AccountBalanceProjection(EventProcessor):
         self.repository = repository
     
     @handles_event
-    async def on_money_deposited(self, event: MoneyDeposited) -> None:
-        current = self.repository.get_balance(event.account_aggregate_id)
+    async def on_money_deposited(self, event: Event[MoneyDeposited]) -> None:  # (1)!
+        current = self.repository.get_balance(event.aggregate_id)  # (2)!
         self.repository.set_balance(
-            event.account_aggregate_id, 
-            current + event.amount
+            event.aggregate_id, 
+            current + event.data.amount  # (3)!
         )
 ```
+
+1. Use `Event[MoneyDeposited]` to receive the full event wrapper with metadata
+2. Access `aggregate_id` from the event wrapper—no need to duplicate it in the payload
+3. The actual event data is in `event.data`
 
 ## Registering Event Processors
 

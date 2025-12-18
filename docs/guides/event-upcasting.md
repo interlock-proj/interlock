@@ -403,7 +403,7 @@ async def migrate_all_events(app: Application):
     
     for aggregate_id in aggregate_ids:
         # Loading events triggers upcasting
-        events = await app.event_bus.load_events(aggregate_id, from_version=0)
+        events = await app.event_bus.load_events(aggregate_id, min_version=0)
         
         # If using eager strategy, events are already rewritten
         # If using lazy strategy, you need to explicitly rewrite:
