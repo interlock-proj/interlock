@@ -1,15 +1,18 @@
+"""Concurrency retry middleware for handling optimistic locking conflicts."""
+
 import asyncio
 import logging
+from typing import Any
 
-from ....domain import Command
-from ....domain.exceptions import ConcurrencyError
-from ....routing import intercepts
-from ..bus import CommandHandler, CommandMiddleware
+from ...domain import Command
+from ...domain.exceptions import ConcurrencyError
+from ...routing import intercepts
+from .base import Handler, Middleware
 
 LOGGER = logging.getLogger(__name__)
 
 
-class ConcurrencyRetryMiddleware(CommandMiddleware):
+class ConcurrencyRetryMiddleware(Middleware):
     """Middleware that retries commands that fail due to concurrency issues.
 
     This middleware retries commands that fail due to concurrency conflicts.
@@ -54,12 +57,15 @@ class ConcurrencyRetryMiddleware(CommandMiddleware):
         self.retry_delay = retry_delay
 
     @intercepts
-    async def retry_on_concurrency(self, command: Command, next: CommandHandler) -> None:
+    async def retry_on_concurrency(self, command: Command, next: Handler) -> Any:
         """Intercept all commands and retry on concurrency errors.
 
         Args:
             command: The command to process.
             next: The next handler in the middleware chain.
+
+        Returns:
+            The result from the command handler.
 
         Raises:
             ConcurrencyError: If all attempts fail due to concurrency conflicts.
@@ -68,8 +74,7 @@ class ConcurrencyRetryMiddleware(CommandMiddleware):
         last_error: ConcurrencyError | None = None
         for attempt in range(self.max_attempts):
             try:
-                await next(command)
-                return
+                return await next(command)
             except ConcurrencyError as e:
                 last_error = e
                 LOGGER.warning(
@@ -78,4 +83,6 @@ class ConcurrencyRetryMiddleware(CommandMiddleware):
                 # Don't sleep after the last attempt
                 if attempt < self.max_attempts - 1:
                     await asyncio.sleep(self.retry_delay)
-        raise ConcurrencyError(f"Max attempts ({self.max_attempts}) reached") from last_error
+        raise ConcurrencyError(
+            f"Max attempts ({self.max_attempts}) reached"
+        ) from last_error

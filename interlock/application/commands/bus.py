@@ -1,65 +1,19 @@
-import inspect
+"""Command bus and routing infrastructure."""
+
 from collections.abc import Callable, Coroutine
 from functools import reduce
-from typing import TYPE_CHECKING, Any, ClassVar
+from typing import Any, TypeVar
 
 from ...domain import Aggregate, Command
 from ..aggregates import AggregateRepository
+from ..middleware import Middleware
 
-if TYPE_CHECKING:
-    from ...routing import MessageRouter
+T = TypeVar("T")
 
+CommandHandler = Callable[[Command[Any]], Coroutine[Any, Any, Any]]
 
-CommandHandler = Callable[[Command], Coroutine[Any, Any, None]]
-
-
-class CommandMiddleware:
-    """Base class for command middleware with annotation-based routing.
-
-    Middleware components wrap command handlers to provide cross-cutting
-    concerns like logging, validation, authentication, or transaction
-    management. They follow the chain of responsibility pattern.
-
-    Command interception is automatically routed based on method
-    decorators. Use @intercepts to mark interceptor methods. The
-    framework will automatically route commands to the appropriate
-    methods based on their type annotations.
-
-    By default, if no interceptor matches the command type, the
-    middleware forwards to the next handler (pass-through behavior).
-    """
-
-    # Class-level routing table
-    _command_router: ClassVar["MessageRouter"]
-
-    def __init_subclass__(cls, **kwargs: object) -> None:
-        """Set up command routing when a subclass is defined."""
-        super().__init_subclass__(**kwargs)
-        from ...routing import setup_middleware_routing
-
-        cls._command_router = setup_middleware_routing(cls)
-
-    async def intercept(self, command: Command, next: CommandHandler) -> None:
-        """Route command to interceptor method or forward to next.
-
-        This method is called by the CommandBus for each command. It
-        uses the routing table to find an appropriate interceptor method
-        based on the command type. If no interceptor is registered for
-        the command type, it forwards to the next handler.
-
-        Args:
-            command: The command to intercept.
-            next: The next handler in the middleware chain.
-        """
-        # Route to interceptor, passing next as an extra argument
-        result = self._command_router.route(self, command, next)
-
-        # If router returned None (IgnoreHandler), forward to next
-        if result is None:
-            await next(command)
-        elif inspect.isawaitable(result):
-            # Router returned coroutine (async interceptor), await it
-            await result
+# Backward compatibility alias
+CommandMiddleware = Middleware
 
 
 class CommandToAggregateMap:
@@ -81,14 +35,14 @@ class CommandToAggregateMap:
                 command_type = value._handles_command_type
                 self.command_to_aggregate_map[command_type] = aggregate_type
 
-    def get(self, command_type: type[Command]) -> type[Aggregate]:
+    def get(self, command_type: type[Command[Any]]) -> type[Aggregate]:
         return self.command_to_aggregate_map[command_type]
 
 
 class AggregateToRepositoryMap:
     @staticmethod
     def from_repositories(
-        repositories: list[AggregateRepository],
+        repositories: list[AggregateRepository[Any]],
     ) -> "AggregateToRepositoryMap":
         map = AggregateToRepositoryMap()
         for repository in repositories:
@@ -96,12 +50,12 @@ class AggregateToRepositoryMap:
         return map
 
     def __init__(self):
-        self.aggregate_to_repository_map = {}
+        self.aggregate_to_repository_map: dict[type[Aggregate], AggregateRepository[Any]] = {}
 
-    def add(self, repository: AggregateRepository):
+    def add(self, repository: AggregateRepository[Any]):
         self.aggregate_to_repository_map[repository.aggregate_type] = repository
 
-    def get(self, aggregate_type: type[Aggregate]) -> AggregateRepository:
+    def get(self, aggregate_type: type[Aggregate]) -> AggregateRepository[Any]:
         return self.aggregate_to_repository_map[aggregate_type]
 
 
@@ -114,11 +68,11 @@ class DelegateToAggregate:
         self.command_to_aggregate_map = command_to_aggregate_map
         self.aggregate_to_repository_map = aggregate_to_repository_map
 
-    async def handle(self, command: Command) -> None:
+    async def handle(self, command: Command[T]) -> T:
         aggregate_type = self.command_to_aggregate_map.get(type(command))
         repository = self.aggregate_to_repository_map.get(aggregate_type)
         async with repository.acquire(command.aggregate_id) as aggregate:
-            aggregate.handle(command)
+            return aggregate.handle(command)
 
 
 class CommandBus:
@@ -137,21 +91,24 @@ class CommandBus:
     def __init__(
         self,
         root_handler: DelegateToAggregate,
-        middleware: list[CommandMiddleware],
+        middleware: list[Middleware],
     ):
         self.root_handler = root_handler
         self.middleware = middleware
         # Build the middleware chain by reducing from right to left
-        self.chain = reduce(
-            lambda next, mw: lambda cmd: mw.intercept(cmd, next),
+        self.chain: Callable[[Command[Any]], Coroutine[Any, Any, Any]] = reduce(
+            lambda next, mw: lambda cmd, n=next, m=mw: m.intercept(cmd, n),
             reversed(middleware),
             self.root_handler.handle,
         )
 
-    async def dispatch(self, command: Command) -> None:
+    async def dispatch(self, command: Command[T]) -> T:
         """Dispatch command through the middleware chain to handler.
 
         Args:
             command: The command to dispatch.
+
+        Returns:
+            The result from the command handler.
         """
-        await self.chain(command)
+        return await self.chain(command)

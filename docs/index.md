@@ -10,9 +10,10 @@ Interlock is a Python framework for building applications using **Command Query 
 
 - **Aggregates**: Domain objects that encapsulate business logic and emit events
 - **Commands**: Explicit intent-driven messages that trigger state changes
+- **Queries**: Typed messages that request data from read models
 - **Events**: Immutable records of what happened in your system
-- **Event Processors**: React to events to build read models or trigger side effects
-- **Middleware**: Cross-cutting concerns like logging, idempotency, and concurrency
+- **Projections**: Build read models from events and serve queries
+- **Middleware**: Cross-cutting concerns like logging, caching, and authorization
 
 ## Installation
 
@@ -26,14 +27,17 @@ pip install interlock
 from pydantic import BaseModel
 from ulid import ULID
 
-from interlock.application import ApplicationBuilder
-from interlock.domain import Aggregate, Command
-from interlock.routing import handles_command, applies_event
+from interlock.application import ApplicationBuilder, Projection
+from interlock.domain import Aggregate, Command, Query
+from interlock.routing import handles_command, applies_event, handles_event, handles_query
 
 
-# 1. Define a command (intent to change state)
-class DepositMoney(Command):
+# 1. Define commands (intent to change) and queries (request data)
+class DepositMoney(Command[None]):
     amount: int
+
+class GetBalance(Query[int]):
+    pass
 
 
 # 2. Define event data (what happened)
@@ -41,7 +45,7 @@ class MoneyDeposited(BaseModel):
     amount: int
 
 
-# 3. Define an aggregate (business logic + state)
+# 3. Define an aggregate (write side - business logic)
 class BankAccount(Aggregate):
     balance: int = 0
 
@@ -56,21 +60,39 @@ class BankAccount(Aggregate):
         self.balance += event.amount
 
 
-# 4. Build and run the application
+# 4. Define a projection (read side - query handling)
+class BalanceProjection(Projection):
+    def __init__(self):
+        super().__init__()
+        self.balances: dict[ULID, int] = {}
+
+    @handles_event
+    async def on_deposit(self, event: MoneyDeposited, aggregate_id: ULID) -> None:
+        self.balances[aggregate_id] = self.balances.get(aggregate_id, 0) + event.amount
+
+    @handles_query
+    async def get_balance(self, query: GetBalance, aggregate_id: ULID) -> int:
+        return self.balances.get(aggregate_id, 0)
+
+
+# 5. Build and run the application
 async def main():
     app = (
         ApplicationBuilder()
         .register_aggregate(BankAccount)
+        .register_projection(BalanceProjection)
         .build()
     )
 
-    async with app:  # Manages startup/shutdown lifecycle
+    async with app:
         account_id = ULID()
-        await app.dispatch(DepositMoney(
-            aggregate_id=account_id,
-            amount=100
-        ))
-        print(f"Deposited $100 to account {account_id}")
+        
+        # Write: dispatch commands
+        await app.dispatch(DepositMoney(aggregate_id=account_id, amount=100))
+        
+        # Read: dispatch queries
+        balance = await app.query(GetBalance(account_id=account_id))
+        print(f"Balance: ${balance}")  # Balance: $100
 
 
 # Run with: asyncio.run(main())

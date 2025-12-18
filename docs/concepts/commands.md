@@ -32,25 +32,33 @@ This indirection enables:
 
 ## Defining Commands
 
-Commands in Interlock extend the `Command` base class:
+Commands in Interlock extend the `Command` base class. Commands are generic over 
+their response type:
 
 ```python
 from interlock.domain import Command
 from ulid import ULID
 
-class DepositMoney(Command):
+class CreateAccount(Command[ULID]):
+    """Create a new bank account, returning its ID."""
+    owner: str
+
+class DepositMoney(Command[None]):
     """Deposit money into a bank account."""
     amount: int
 
-class WithdrawMoney(Command):
+class WithdrawMoney(Command[None]):
     """Withdraw money from a bank account."""
     amount: int
 
-class TransferMoney(Command):
+class TransferMoney(Command[None]):
     """Transfer money between accounts."""
     to_account_id: ULID
     amount: int
 ```
+
+The type parameter (`[ULID]`, `[None]`) indicates what the command handler returns. 
+Use `Command[None]` for commands that don't return a value.
 
 ### Required Fields
 
@@ -125,7 +133,13 @@ app = (
 )
 
 async with app:
-    # Dispatch a command
+    # Dispatch a command (returns the command's declared response type)
+    account_id = await app.dispatch(CreateAccount(
+        aggregate_id=ULID(),  # Pre-generated ID
+        owner="Alice"
+    ))
+    
+    # Command[None] returns None
     await app.dispatch(DepositMoney(
         aggregate_id=account_id,
         amount=100
@@ -176,16 +190,18 @@ DepositMoney(aggregate_id=ULID(), amount=-100)
 Cross-cutting validation in middleware:
 
 ```python
-class FraudDetectionMiddleware(CommandMiddleware):
+from interlock.application.middleware import Middleware, Handler
+
+class FraudDetectionMiddleware(Middleware):
     @intercepts
     async def check_large_deposits(
         self, 
         command: DepositMoney, 
-        next: CommandHandler
-    ) -> None:
+        next: Handler
+    ):
         if command.amount > 10000:
             await self.fraud_service.flag_for_review(command)
-        await next(command)
+        return await next(command)
 ```
 
 ### 3. Domain Validation

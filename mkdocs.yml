@@ -136,17 +136,20 @@ nav:
       - Commands & Handlers: tutorial/02-commands-and-handlers.md
       - Events & Sourcing: tutorial/03-events-and-sourcing.md
       - Event Processors: tutorial/04-event-processors.md
-      - Middleware: tutorial/05-middleware.md
-      - Structuring Your Application: tutorial/06-structuring-the-application.md
-      - Putting It Together: tutorial/07-putting-it-together.md
+      - Queries & Projections: tutorial/05-queries-and-projections.md
+      - Middleware: tutorial/06-middleware.md
+      - Structuring Your Application: tutorial/07-structuring-the-application.md
+      - Putting It Together: tutorial/08-putting-it-together.md
   - Concepts:
       - concepts/index.md
       - Event Sourcing: concepts/event-sourcing.md
       - CQRS: concepts/cqrs.md
       - Aggregates: concepts/aggregates.md
       - Commands: concepts/commands.md
+      - Queries: concepts/queries.md
       - Events: concepts/events.md
       - Event Processors: concepts/event-processors.md
+      - Projections: concepts/projections.md
   - Guides:
       - guides/index.md
       - Application Lifecycle: guides/application-lifecycle.md

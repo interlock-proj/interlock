@@ -237,11 +237,27 @@ class BankAccount(Aggregate):
 ### Read Side
 
 ```python
-from interlock.domain import EventProcessor, Event
-from interlock.routing import handles_event
+from abc import ABC, abstractmethod
+from interlock.application import Projection
+from interlock.domain import Query
+from interlock.routing import handles_event, handles_query
 
-class AccountBalanceProjection(EventProcessor):
+# Define repository interface (allows swapping storage backends)
+class BalanceRepository(ABC):
+    @abstractmethod
+    async def get(self, account_id: ULID) -> int: ...
+    
+    @abstractmethod
+    async def save(self, account_id: ULID, balance: int) -> None: ...
+
+# Query with typed response
+class GetAccountBalance(Query[int]):
+    account_id: ULID
+
+# Projection with injected repository
+class AccountBalanceProjection(Projection):
     def __init__(self, repository: BalanceRepository):
+        super().__init__()
         self.repository = repository
 
     @handles_event
@@ -251,14 +267,20 @@ class AccountBalanceProjection(EventProcessor):
             event.aggregate_id, 
             current + event.amount
         )
+    
+    @handles_query
+    async def get_balance(self, query: GetAccountBalance) -> int:
+        return await self.repository.get(query.account_id)
 ```
 
 ### Flexibility
 
-Interlock is opinionated about the write side (commands, aggregates, events) but flexible about the read side:
+Interlock is opinionated about the write side (commands, aggregates, events) but 
+flexible about the read side:
 
-- Use Event Processors for reactive projections
-- Query any database or view that fits your needs
+- Use `Projection` for read models with typed queries
+- Use `EventProcessor` for side effects (notifications, integrations)
+- Inject any database or storage via dependency injection
 - Mix synchronous and eventually-consistent reads
 
 ## Summary

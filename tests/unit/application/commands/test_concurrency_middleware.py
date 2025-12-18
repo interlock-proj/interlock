@@ -6,9 +6,7 @@ from unittest.mock import AsyncMock
 import pytest
 from ulid import ULID
 
-from interlock.application.commands.middleware.concurrency import (
-    ConcurrencyRetryMiddleware,
-)
+from interlock.application.middleware import ConcurrencyRetryMiddleware
 from interlock.domain import Command
 from interlock.domain.exceptions import ConcurrencyError
 

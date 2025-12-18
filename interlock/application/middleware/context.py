@@ -5,15 +5,17 @@ distributed tracing across the entire system. It extracts context from commands
 and sets up the execution context before command execution.
 """
 
+from typing import Any
+
 from ulid import ULID
 
-from ....context import ExecutionContext, clear_context, set_context
-from ....domain import Command
-from ....routing import intercepts
-from ..bus import CommandHandler, CommandMiddleware
+from ...context import ExecutionContext, clear_context, set_context
+from ...domain import Command
+from ...routing import intercepts
+from .base import Handler, Middleware
 
 
-class ContextPropagationMiddleware(CommandMiddleware):
+class ContextPropagationMiddleware(Middleware):
     """Middleware that propagates execution context from commands.
 
     This middleware extracts correlation_id, causation_id, and command_id from
@@ -66,7 +68,7 @@ class ContextPropagationMiddleware(CommandMiddleware):
     """
 
     @intercepts
-    async def propagate_context(self, command: Command, next: CommandHandler) -> None:
+    async def propagate_context(self, command: Command, next: Handler) -> Any:
         """Set up execution context and pass command to next handler.
 
         The context is cleared after command execution (even on
@@ -77,6 +79,9 @@ class ContextPropagationMiddleware(CommandMiddleware):
                 its correlation_id, causation_id, and command_id
                 fields.
             next: The next handler in the middleware chain.
+
+        Returns:
+            The result from the command handler.
         """
         # Extract context from command, generate defaults for missing values
         correlation_id = command.correlation_id
@@ -99,7 +104,8 @@ class ContextPropagationMiddleware(CommandMiddleware):
 
         try:
             # Pass to next handler with context set
-            await next(command)
+            return await next(command)
         finally:
             # Always clear context after command execution to prevent leakage
             clear_context()
+

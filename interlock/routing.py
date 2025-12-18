@@ -275,6 +275,7 @@ class HandlerDecorator:
 handles_command = HandlerDecorator("_is_command_handler", "_handles_command_type")
 applies_event = HandlerDecorator("_is_event_applier", "_applies_event_type")
 handles_event = HandlerDecorator("_is_event_handler", "_handles_event_type")
+handles_query = HandlerDecorator("_is_query_handler", "_handles_query_type")
 intercepts = HandlerDecorator("_is_command_interceptor", "_intercepts_command_type")
 
 # Add docstrings
@@ -312,19 +313,42 @@ Example:
     ...         self.update_read_model(evt)
 """
 
-intercepts.__doc__ = """Decorator marking a method as a command \
-interceptor (for middleware).
+handles_query.__doc__ = """Decorator marking a method as a query \
+handler (for projections).
 
-The command type is automatically extracted from the method's type \
-annotation. Middleware can intercept the base Command type to handle \
-all commands, or specific command types for targeted interception.
+The query type is automatically extracted from the method's type annotation.
+Query handlers return typed responses based on the Query's generic parameter.
 
 Example:
-    >>> class LoggingMiddleware(CommandMiddleware):
+    >>> class UserProjection(Projection):
+    ...     @handles_query
+    ...     async def get_user(self, query: GetUserById) -> UserProfile:
+    ...         return self.users[query.user_id]
+    ...
+    ...     @handles_query
+    ...     async def find_by_email(self, query: GetUserByEmail) -> ULID | None:
+    ...         return self.email_index.get(query.email)
+"""
+
+intercepts.__doc__ = """Decorator marking a method as a \
+message interceptor (for middleware).
+
+The message type is automatically extracted from the method's type \
+annotation. Middleware can intercept commands, queries, or both.
+Use base types (Command, Query) to intercept all messages of that kind,
+or specific types for targeted interception.
+
+Example:
+    >>> class LoggingMiddleware(Middleware):
     ...     @intercepts
-    ...     def log_command(self, cmd: Command, next: CommandHandler):
+    ...     async def log_command(self, cmd: Command, next: Handler):
     ...         logger.info(f"Command: {type(cmd).__name__}")
-    ...         await next(cmd)
+    ...         return await next(cmd)
+    ...
+    ...     @intercepts
+    ...     async def log_query(self, query: Query, next: Handler):
+    ...         logger.info(f"Query: {type(query).__name__}")
+    ...         return await next(query)
 """
 
 
@@ -421,21 +445,42 @@ def setup_event_handling(cls: type) -> MessageRouter:
     )
 
 
+def setup_query_routing(cls: type) -> MessageRouter:
+    """Set up query routing for a projection class.
+
+    Args:
+        cls: The projection class to set up routing for.
+
+    Returns:
+        A configured MessageRouter for query handlers.
+    """
+    # Import here to avoid circular dependency
+    from .domain import Query
+
+    return setup_routing(
+        cls,
+        marker_attr="_is_query_handler",
+        type_attr="_handles_query_type",
+        default_handler=RaiseHandler(Query, "handler"),
+    )
+
+
 def setup_middleware_routing(cls: type) -> MessageRouter:
-    """Set up command interception routing for middleware.
+    """Set up message interception routing for middleware.
+
+    Middleware can intercept both commands and queries using the
+    @intercepts decorator. The routing is based on message type
+    annotations.
 
     Args:
         cls: The middleware class to set up routing for.
 
     Returns:
-        A configured MessageRouter for command interceptors.
+        A configured MessageRouter for message interceptors.
     """
-    # Import here to avoid circular dependency
-    from .domain import Command
-
     return setup_routing(
         cls,
         marker_attr="_is_command_interceptor",
         type_attr="_intercepts_command_type",
-        default_handler=IgnoreHandler(Command, "interceptor"),
+        default_handler=IgnoreHandler(BaseModel, "interceptor"),
     )

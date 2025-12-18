@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock
 import pytest
 from ulid import ULID
 
-from interlock.application.commands.middleware.idempotency import (
+from interlock.application.middleware import (
     HasIdempotencyKey,
     IdempotencyMiddleware,
     IdempotencyStorageBackend,

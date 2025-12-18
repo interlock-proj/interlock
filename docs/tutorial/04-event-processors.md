@@ -170,4 +170,4 @@ class EmailNotificationProcessor(EventProcessor):
 
 ## Next Steps
 
-Learn how to add cross-cutting concerns with [Middleware](05-middleware.md).
+Learn how to serve typed queries from your projections in [Queries & Projections](05-queries-and-projections.md).

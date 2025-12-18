@@ -1,7 +1,7 @@
 # Structuring Your Application
 
 So far, we've been building our application imperatively—registering each aggregate, 
-processor, and middleware by hand. This works great for learning, but as your 
+projection, and middleware by hand. This works great for learning, but as your 
 application grows, it becomes tedious.
 
 Interlock provides a **convention-based** approach that automatically discovers 
@@ -17,9 +17,9 @@ from interlock.application import ApplicationBuilder
 app = (
     ApplicationBuilder()
     .register_aggregate(BankAccount)
-    .register_dependency(AccountBalanceRepository, lambda: balance_repo)
+    .register_dependency(AccountBalanceRepository, InMemoryAccountBalanceRepository)
     .register_dependency(FraudService, RandomFraudService)
-    .register_event_processor(AccountBalanceProjection)
+    .register_projection(AccountBalanceProjection)
     .register_middleware(LoggingMiddleware)
     .register_middleware(FraudDetectionMiddleware)
     .build()
@@ -44,9 +44,12 @@ my_bank_app/
 ├── commands/
 │   ├── __init__.py
 │   └── account_commands.py  # Contains DepositMoney, etc.
-├── processors/
+├── queries/
 │   ├── __init__.py
-│   └── projections.py       # Contains AccountBalanceProjection
+│   └── account_queries.py   # Contains GetAccountBalance, etc.
+├── projections/
+│   ├── __init__.py
+│   └── balance_projection.py # Contains AccountBalanceProjection
 ├── middleware/
 │   ├── __init__.py
 │   └── fraud.py             # Contains FraudDetectionMiddleware
@@ -69,12 +72,12 @@ app = (
 )
 ```
 
-1. Scans `my_bank_app` and all submodules for aggregates, processors, middleware, etc.
+1. Scans `my_bank_app` and all submodules for aggregates, projections, middleware, etc.
 
 The `convention_based()` method:
 
 - Scans the package recursively
-- Discovers classes that inherit from `Aggregate`, `EventProcessor`, `CommandMiddleware`
+- Discovers classes that inherit from `Aggregate`, `Projection`, `Middleware`, etc.
 - Registers them automatically with the builder
 
 ## How Discovery Works
@@ -84,8 +87,9 @@ Interlock uses type introspection to find components:
 | Base Class | Discovered From |
 |------------|-----------------|
 | `Aggregate` | Any module in the package |
+| `Projection` | Any module in the package |
 | `EventProcessor` | Any module in the package |
-| `CommandMiddleware` | Any module in the package |
+| `Middleware` | Any module in the package |
 | `EventUpcaster` | Any module in the package |
 
 ## Mixing Approaches
@@ -114,6 +118,7 @@ def create_test_app():
     return (
         ApplicationBuilder()
         .register_aggregate(BankAccount)
+        .register_projection(AccountBalanceProjection)
         .register_dependency(FraudService, StubFraudService)
         .build()
     )
@@ -140,5 +145,4 @@ def create_test_app():
 
 ## Next Steps
 
-Finally, let's [put everything together](07-putting-it-together.md) into a complete application.
-
+Finally, let's [put everything together](08-putting-it-together.md) into a complete application.

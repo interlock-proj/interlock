@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock
 import pytest
 from ulid import ULID
 
-from interlock.application.commands.middleware.logging import LoggingMiddleware
+from interlock.application.middleware import LoggingMiddleware
 from interlock.context import ExecutionContext, clear_context, set_context
 from interlock.domain import Command
 

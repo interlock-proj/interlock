@@ -1,11 +1,14 @@
 # Middleware
 
-Middleware wraps command execution to add cross-cutting concerns like logging, metrics, and error handling.
-**Middleware** intercepts commands before and/or after they're handled. Use middleware for:
+Middleware wraps command and query execution to add cross-cutting concerns like 
+logging, metrics, and error handling.
+
+**Middleware** intercepts messages before and/or after they're handled. Use middleware for:
 
 - Logging and tracing
 - Authentication and authorization
 - Fraud detection
+- Caching query results
 - Rate limiting
 - Performance monitoring
 
@@ -108,10 +111,10 @@ async def test_middleware_allows_clean_deposits(app_without_fraud):
 Now let's implement the middleware:
 
 ```python
-from interlock.application.commands import CommandMiddleware, CommandHandler
+from interlock.application.middleware import Middleware, Handler
 from interlock.routing import intercepts
 
-class FraudDetectionMiddleware(CommandMiddleware):
+class FraudDetectionMiddleware(Middleware):
     """Check transactions against a fraud detection service."""
 
     def __init__(self, fraud_service: FraudService):  # (1)!
@@ -121,34 +124,66 @@ class FraudDetectionMiddleware(CommandMiddleware):
     async def check_deposit(
         self, 
         command: DepositMoney,  # (3)!
-        next: CommandHandler
-    ) -> None:
+        next: Handler
+    ):
         if self.fraud_service.is_fraudulent(command.amount):
             raise FraudDetectedError(
                 f"Suspicious deposit of {command.amount} detected!"
             )
-        await next(command)  # (4)!
+        return await next(command)  # (4)!
 ```
 
 1. The `FraudService` dependency is **automatically injected** by the DI container
-2. The `@intercepts` decorator marks this method as a command interceptor
-3. Type annotation determines which commands this method intercepts
-4. Call `await next(command)` to pass control to the next middleware
+2. The `@intercepts` decorator marks this method as an interceptor
+3. Type annotation determines which messages this method intercepts
+4. Call `await next(command)` to pass control to the next handler; return the result
 
 !!! tip "Selective Interception"
-    Middleware methods only intercept commands matching their type annotation.
+    Middleware methods only intercept messages matching their type annotation.
     To intercept *all* commands, annotate with the base `Command` type.
+    To intercept *all* queries, annotate with `Query`.
+
+## Intercepting Both Commands and Queries
+
+The same middleware can intercept both commands and queries:
+
+```python
+from interlock.domain import Command, Query
+
+class LoggingMiddleware(Middleware):
+    @intercepts
+    async def log_command(self, command: Command, next: Handler):
+        print(f"Command: {type(command).__name__}")
+        return await next(command)
+    
+    @intercepts
+    async def log_query(self, query: Query, next: Handler):
+        print(f"Query: {type(query).__name__}")
+        return await next(query)
+```
+
+Or intercept everything with a single method:
+
+```python
+from pydantic import BaseModel
+
+class UnifiedLoggingMiddleware(Middleware):
+    @intercepts
+    async def log_all(self, message: BaseModel, next: Handler):
+        print(f"Message: {type(message).__name__}")
+        return await next(message)
+```
 
 ## Using Built-in Middleware
 
 Interlock provides several built-in middleware. Let's use `LoggingMiddleware`:
 
 ```python
-from interlock.application.commands.middleware import LoggingMiddleware
+from interlock.application.middleware import LoggingMiddleware
 ```
 
-`LoggingMiddleware` logs each command with correlation context for distributed tracing.
-It takes a log level as a parameter:
+`LoggingMiddleware` logs each command and query with correlation context for 
+distributed tracing. It takes a log level as a parameter:
 
 ```python
 LoggingMiddleware("INFO")   # Log at INFO level
@@ -161,11 +196,12 @@ Register middleware and its dependencies with the `ApplicationBuilder`:
 
 ```python
 from interlock.application import ApplicationBuilder
-from interlock.application.commands.middleware import LoggingMiddleware
+from interlock.application.middleware import LoggingMiddleware
 
 app = (
     ApplicationBuilder()
     .register_aggregate(BankAccount)
+    .register_projection(BalanceProjection)
     .register_dependency(FraudService, RandomFraudService)  # (1)!
     .register_middleware(LoggingMiddleware)
     .register_middleware(FraudDetectionMiddleware)  # (2)!
@@ -182,11 +218,11 @@ a real `MLFraudService` in production without changing the middleware code.
 
 !!! note "Middleware Order"
     Middleware executes in registration order. `LoggingMiddleware` runs first, 
-    then `FraudDetectionMiddleware`, then the aggregate handler.
+    then `FraudDetectionMiddleware`, then the handler (aggregate or projection).
 
 ## The Middleware Chain
 
-When a command is dispatched, it flows through the middleware chain:
+When a command or query is dispatched, it flows through the middleware chain:
 
 ```mermaid
 sequenceDiagram
@@ -212,15 +248,17 @@ sequenceDiagram
     end
 ```
 
+Queries follow the same pattern, but route to projections instead of aggregates.
+
 ## Other Built-in Middleware
 
 | Middleware | Purpose |
 |------------|---------|
-| `LoggingMiddleware` | Log commands with correlation context |
+| `LoggingMiddleware` | Log commands/queries with correlation context |
 | `IdempotencyMiddleware` | Prevent duplicate command processing |
 | `ConcurrencyRetryMiddleware` | Retry on optimistic concurrency conflicts |
 | `ContextPropagationMiddleware` | Propagate correlation/causation IDs |
 
 ## Next Steps
 
-Now let's learn about [Structuring Your Application](06-structuring-the-application.md) with conventions.
+Now let's learn about [Structuring Your Application](07-structuring-the-application.md) with conventions.

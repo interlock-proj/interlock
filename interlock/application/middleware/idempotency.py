@@ -1,10 +1,12 @@
+"""Idempotency middleware for preventing duplicate command processing."""
+
 from abc import ABC, abstractmethod
 from logging import getLogger
-from typing import Protocol, runtime_checkable
+from typing import Any, Protocol, runtime_checkable
 
-from ....domain import Command
-from ....routing import intercepts
-from ..bus import CommandHandler, CommandMiddleware
+from ...domain import Command
+from ...routing import intercepts
+from .base import Handler, Middleware
 
 LOGGER = getLogger(__name__)
 
@@ -20,13 +22,13 @@ class HasIdempotencyKey(Protocol):
     Examples:
         Field-based idempotency key:
 
-        >>> class DepositMoney(Command):
+        >>> class DepositMoney(Command[None]):
         ...     amount: int
         ...     idempotency_key: str
 
         Property-based idempotency key (computed):
 
-        >>> class TransferMoney(Command):
+        >>> class TransferMoney(Command[None]):
         ...     from_account_id: ULID
         ...     to_account_id: ULID
         ...     amount: int
@@ -73,7 +75,7 @@ class IdempotencyStorageBackend(ABC):
         ...
 
 
-class IdempotencyMiddleware(CommandMiddleware):
+class IdempotencyMiddleware(Middleware):
     """Middleware that ensures commands are idempotent.
 
     This middleware intercepts commands that have an `idempotency_key`
@@ -91,7 +93,7 @@ class IdempotencyMiddleware(CommandMiddleware):
 
         Field-based key:
 
-        >>> class DepositMoney(Command):
+        >>> class DepositMoney(Command[None]):
         ...     amount: int
         ...     idempotency_key: str
         ...
@@ -99,7 +101,7 @@ class IdempotencyMiddleware(CommandMiddleware):
 
         Property-based key:
 
-        >>> class TransferMoney(Command):
+        >>> class TransferMoney(Command[None]):
         ...     from_account: ULID
         ...     to_account: ULID
         ...     amount: int
@@ -115,7 +117,7 @@ class IdempotencyMiddleware(CommandMiddleware):
         self.idempotency_storage_backend = idempotency_storage_backend
 
     @intercepts
-    async def ensure_idempotency(self, command: Command, next: CommandHandler) -> None:
+    async def ensure_idempotency(self, command: Command, next: Handler) -> Any:
         """Check idempotency and process command if not processed.
 
         Commands with an `idempotency_key` attribute are checked against
@@ -125,11 +127,13 @@ class IdempotencyMiddleware(CommandMiddleware):
         Args:
             command: The command to check.
             next: The next handler in the chain.
+
+        Returns:
+            The result from the command handler, or None if skipped.
         """
         # Check if command has idempotency tracking
         if not isinstance(command, HasIdempotencyKey):
-            await next(command)
-            return
+            return await next(command)
 
         idempotency_key = command.idempotency_key
 
@@ -138,10 +142,11 @@ class IdempotencyMiddleware(CommandMiddleware):
                 "Skipping previously processed command",
                 extra={"idempotency_key": idempotency_key},
             )
-            return
+            return None
 
-        await next(command)
+        result = await next(command)
         await self.idempotency_storage_backend.store_idempotency_key(idempotency_key)
+        return result
 
 
 class InMemoryIdempotencyStorageBackend(IdempotencyStorageBackend):
@@ -178,3 +183,4 @@ class NullIdempotencyStorageBackend(IdempotencyStorageBackend):
 
     async def has_idempotency_key(self, key: str) -> bool:
         return False
+

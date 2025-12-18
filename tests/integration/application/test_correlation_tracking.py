@@ -6,9 +6,7 @@ import pytest
 from ulid import ULID
 
 from interlock.application import ApplicationBuilder
-from interlock.application.commands.middleware.context import (
-    ContextPropagationMiddleware,
-)
+from interlock.application.middleware import ContextPropagationMiddleware
 from interlock.application.events.processing import EventProcessor
 from interlock.context import get_context
 from interlock.routing import handles_event

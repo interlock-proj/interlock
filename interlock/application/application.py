@@ -5,10 +5,15 @@ from typing import TYPE_CHECKING, Any, Protocol, TypeVar, runtime_checkable
 
 from ulid import ULID
 
-from ..domain import Aggregate, Command
+from ..domain import Aggregate, Command, Query
 
 if TYPE_CHECKING:
-    from ..testing import AggregateScenario, ProcessorScenario, SagaScenario
+    from ..testing import (
+        AggregateScenario,
+        ProcessorScenario,
+        ProjectionScenario,
+        SagaScenario,
+    )
 from .aggregates import (
     AggregateCacheBackend,
     AggregateFactory,
@@ -20,10 +25,10 @@ from .aggregates import (
 from .commands import (
     AggregateToRepositoryMap,
     CommandBus,
-    CommandMiddleware,
     CommandToAggregateMap,
     DelegateToAggregate,
 )
+from .middleware import Middleware
 from .container import ContextualBinding, DependencyContainer
 from .events import (
     CatchupCondition,
@@ -46,6 +51,13 @@ from .events import (
     UpcastingStrategy,
 )
 from .events.processing import SagaStateStore
+from .projections import (
+    DelegateToProjection,
+    Projection,
+    ProjectionRegistry,
+    QueryBus,
+    QueryToProjectionMap,
+)
 
 T = TypeVar("T")
 
@@ -66,8 +78,9 @@ class Application:
         self.contextual_binding = contextual_binding
         self.command_bus = self.resolve(CommandBus)
         self.event_bus = self.resolve(EventBus)
+        self.query_bus = self.resolve(QueryBus)
 
-    async def dispatch(self, command: Command) -> None:
+    async def dispatch(self, command: Command[T]) -> T:
         """Dispatch a command to the application.
 
         This method will dispatch a command to the application. The command
@@ -76,8 +89,26 @@ class Application:
 
         Args:
             command: The command to dispatch.
+
+        Returns:
+            The result from the command handler.
         """
-        await self.command_bus.dispatch(command)
+        return await self.command_bus.dispatch(command)
+
+    async def query(self, query: Query[T]) -> T:
+        """Execute a query against the application.
+
+        This method will dispatch a query to the application. The query
+        will be dispatched to the query bus and routed through middleware
+        to the appropriate projection.
+
+        Args:
+            query: The query to execute.
+
+        Returns:
+            The query result as declared by the Query's type parameter.
+        """
+        return await self.query_bus.dispatch(query)
 
     def resolve(self, type_to_resolve: type[T]) -> T:
         """Resolve a dependency from the application.
@@ -267,6 +298,41 @@ class Application:
             raise TypeError(f"Expected Saga instance, got {type(saga).__name__}")
         return SagaScenario(saga)
 
+    def projection_scenario(
+        self,
+        projection_type: type[Projection],
+    ) -> "ProjectionScenario":
+        """Create a test scenario for a projection with DI.
+
+        The projection is instantiated using the application's dependency
+        injection container, so all registered dependencies are automatically
+        injected.
+
+        Args:
+            projection_type: The projection class to test.
+
+        Returns:
+            A ProjectionScenario ready for Given-When-Then testing.
+
+        Example:
+            >>> app = (
+            ...     ApplicationBuilder()
+            ...     .register_projection(UserProjection)
+            ...     .build()
+            ... )
+            >>> async with app.projection_scenario(UserProjection) as scenario:
+            ...     scenario.given(UserCreated(user_id=id, name="Alice"))
+            ...     result = await scenario.when(GetUserById(user_id=id))
+            ...     assert result.name == "Alice"
+        """
+        from ..testing import ProjectionScenario
+
+        # Resolve the projection from the DI container
+        projection = self.contextual_binding.container_for(
+            projection_type
+        ).resolve(projection_type)
+        return ProjectionScenario(projection)
+
 
 # At the API level, the application builder simply provides a fluent API for
 # configuring the application like all builders. Under the hood, the builder
@@ -360,6 +426,21 @@ class ApplicationBuilder:
 
         self.container.register_singleton(SagaStateStore, SagaStateStore.in_memory)
 
+        # Query Bus Defaults:
+        self.container.register_singleton(
+            dependency_type=QueryToProjectionMap,
+            factory=self._build_query_to_projection_map,
+        )
+        self.container.register_singleton(
+            dependency_type=ProjectionRegistry,
+            factory=self._build_projection_registry,
+        )
+        self.container.register_singleton(DelegateToProjection)
+        self.container.register_singleton(
+            dependency_type=QueryBus,
+            factory=self._build_query_bus,
+        )
+
     def register_dependency(
         self,
         dependency_type: type[T],
@@ -443,14 +524,15 @@ class ApplicationBuilder:
 
     def register_middleware(
         self,
-        middleware_type: type[CommandMiddleware],
+        middleware_type: type[Middleware],
     ) -> "ApplicationBuilder":
         """Register middleware with the application.
 
         This method will register middleware with the application. The
         middleware will be registered with the application and will be
         available to be resolved. Middleware uses annotation-based routing
-        with @intercepts decorator to determine which commands to intercept.
+        with @intercepts decorator to determine which commands or queries
+        to intercept.
 
         Args:
             middleware_type: The type of middleware to register
@@ -460,7 +542,7 @@ class ApplicationBuilder:
         """
         container = self.contextual_binding.container_for(middleware_type)
         container.register_singleton(middleware_type)
-        container.register_singleton(CommandMiddleware, middleware_type)
+        container.register_singleton(Middleware, middleware_type)
         return self
 
     def register_event_processor(
@@ -492,6 +574,46 @@ class ApplicationBuilder:
             container.register_singleton(CatchupCondition, lambda: catchup_condition)
         if catchup_strategy:
             container.register_singleton(CatchupStrategy, lambda: catchup_strategy)
+        return self
+
+    def register_projection(
+        self,
+        projection_type: type[Projection],
+        catchup_condition: CatchupCondition | None = None,
+        catchup_strategy: CatchupStrategy | None = None,
+    ) -> "ApplicationBuilder":
+        """Register a projection with the application.
+
+        Projections combine event handling (building read models) with
+        query handling (serving reads). This method registers both
+        capabilities.
+
+        The projection will be available for:
+        - Event processing via run_event_processors()
+        - Query handling via Application.query()
+
+        Args:
+            projection_type: The projection class to register.
+            catchup_condition: The condition to trigger catchup.
+            catchup_strategy: The strategy to use for catchup.
+
+        Returns:
+            The application builder.
+        """
+        # Register as both a projection (for queries) and event processor
+        container = self.contextual_binding.container_for(projection_type)
+        container.register_singleton(projection_type)
+        container.register_singleton(Projection, projection_type)
+        container.register_singleton(EventProcessor, projection_type)
+        container.register_singleton(EventProcessorExecutor)
+        if catchup_condition:
+            container.register_singleton(
+                CatchupCondition, lambda: catchup_condition
+            )
+        if catchup_strategy:
+            container.register_singleton(
+                CatchupStrategy, lambda: catchup_strategy
+            )
         return self
 
     def register_upcaster(
@@ -582,5 +704,21 @@ class ApplicationBuilder:
 
     def _build_command_bus(self) -> CommandBus:
         root_handler = self.container.resolve(DelegateToAggregate)
-        all = self.contextual_binding.resolve_all_of_type(CommandMiddleware)
-        return CommandBus(root_handler, all)
+        all_middleware = self.contextual_binding.resolve_all_of_type(Middleware)
+        return CommandBus(root_handler, all_middleware)
+
+    def _build_query_to_projection_map(self) -> QueryToProjectionMap:
+        all_projections = self.contextual_binding.all_of_type(Projection)
+        return QueryToProjectionMap.from_projections(all_projections)
+
+    def _build_projection_registry(self) -> ProjectionRegistry:
+        all_projections = [
+            self.contextual_binding.container_for(proj).resolve(proj)
+            for proj in self.contextual_binding.all_of_type(Projection)
+        ]
+        return ProjectionRegistry.from_projections(all_projections)
+
+    def _build_query_bus(self) -> QueryBus:
+        root_handler = self.container.resolve(DelegateToProjection)
+        all_middleware = self.contextual_binding.resolve_all_of_type(Middleware)
+        return QueryBus(root_handler, all_middleware)

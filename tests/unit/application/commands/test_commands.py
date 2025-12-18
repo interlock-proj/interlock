@@ -3,7 +3,7 @@ import logging
 import pytest
 from ulid import ULID
 
-from interlock.application.commands.middleware import LoggingMiddleware
+from interlock.application.middleware import LoggingMiddleware
 from tests.conftest import ExecutionTracker
 from tests.fixtures.test_app.aggregates.bank_account import (
     BankAccount,

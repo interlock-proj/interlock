@@ -1,14 +1,17 @@
-import logging
+"""Logging middleware for command and query tracing."""
 
-from ....context import get_context
-from ....domain import Command
-from ....routing import intercepts
-from ..bus import CommandHandler, CommandMiddleware
+import logging
+from typing import Any
+
+from ...context import get_context
+from ...domain import Command
+from ...routing import intercepts
+from .base import Handler, Middleware
 
 LOGGER = logging.getLogger(__name__)
 
 
-class LoggingMiddleware(CommandMiddleware):
+class LoggingMiddleware(Middleware):
     """Middleware that logs command execution with correlation.
 
     Logs each command received at the specified logging level with the
@@ -50,12 +53,15 @@ class LoggingMiddleware(CommandMiddleware):
         self.level = getattr(logging, level.upper())
 
     @intercepts
-    async def log_command(self, command: Command, next: CommandHandler) -> None:
+    async def log_command(self, command: Command, next: Handler) -> Any:
         """Log the command type with correlation context.
 
         Args:
             command: The command to log and process.
             next: The next handler in the chain.
+
+        Returns:
+            The result from the command handler.
         """
         # Build log extra with command type and aggregate_id only
         extra = {
@@ -73,4 +79,5 @@ class LoggingMiddleware(CommandMiddleware):
             extra["command_id"] = str(ctx.command_id)
 
         LOGGER.log(self.level, "Received Command", extra=extra)
-        await next(command)
+        return await next(command)
+

@@ -5,7 +5,8 @@ from pydantic import BaseModel
 from ulid import ULID
 
 from interlock.application.events import EventProcessor, Saga
-from interlock.domain import Event
+from interlock.application.projections import Projection
+from interlock.domain import Event, Query
 
 from .core import Scenario, StateMatches
 
@@ -13,8 +14,10 @@ from .core import Scenario, StateMatches
 NullablePredicate = Callable[[Any | None], bool]
 
 TProcessor = TypeVar("TProcessor", bound=EventProcessor)
+TProjection = TypeVar("TProjection", bound=Projection)
 TSagaState = TypeVar("TSagaState", bound=BaseModel)
 TSaga = TypeVar("TSaga", bound="Saga[Any]")
+TResponse = TypeVar("TResponse")
 
 PROCESSOR_STATE_KEY = "processor_state"
 
@@ -117,3 +120,94 @@ class SagaScenario(Scenario[TSagaState], Generic[TSaga, TSagaState]):
     async def get_state(self, state_key: Any) -> TSagaState | None:
         result = await self.state_store.load(state_key)
         return cast("TSagaState | None", result)
+
+
+PROJECTION_STATE_KEY = "projection_state"
+
+
+class ProjectionScenario(Scenario[Any], Generic[TProjection]):
+    """A scenario for testing a projection.
+
+    Projections combine event handling with query handling. This scenario
+    allows you to test both capabilities:
+    - Given: Process events to build read model state
+    - When: Execute queries against the projection
+    - Then: Assert on query results or projection state
+
+    Use via Application.projection_scenario() for automatic DI:
+
+        >>> async with app.projection_scenario(UserProjection) as scenario:
+        ...     scenario.given(UserCreated(user_id=id, name="Alice"))
+        ...     result = await scenario.when(GetUserById(user_id=id))
+        ...     assert result.name == "Alice"
+
+    Or instantiate directly:
+
+        >>> async with ProjectionScenario(UserProjection()) as scenario:
+        ...     scenario.given(UserCreated(user_id=id, name="Alice"))
+        ...     scenario.should_have_state(lambda p: len(p.users) == 1)
+    """
+
+    def __init__(self, projection: TProjection):
+        super().__init__()
+        self.projection = projection
+        self.query_results: list[Any] = []
+
+    async def perform_actions(self) -> None:
+        # Wrap payloads in Event objects for handlers with Event[T] annotations
+        aggregate_id = ULID()
+        for i, event_payload in enumerate(self.event_payloads, start=1):
+            event = Event(
+                aggregate_id=aggregate_id,
+                data=event_payload,
+                sequence_number=i,
+            )
+            try:
+                await self.projection.handle(event)
+            except Exception as e:
+                self.errors.append(e)
+
+    async def when(self, query: Query[TResponse]) -> TResponse:
+        """Execute a query against the projection.
+
+        This method processes any pending events first, then executes
+        the query and returns the result.
+
+        Args:
+            query: The query to execute.
+
+        Returns:
+            The query result.
+        """
+        # Process any pending events first
+        await self.perform_actions()
+        self.event_payloads = []  # Clear processed events
+
+        # Execute the query
+        result = await self.projection.query(query)
+        self.query_results.append(result)
+        return result
+
+    def should_have_state(
+        self, predicate: Callable[[TProjection], bool]
+    ) -> "ProjectionScenario[TProjection]":
+        """Assert that the projection state matches a predicate.
+
+        Args:
+            predicate: A function that receives the projection and returns
+                True if the state is valid.
+
+        Returns:
+            Self for chaining.
+        """
+        self.expectations.append(
+            StateMatches(
+                PROJECTION_STATE_KEY, cast("NullablePredicate", predicate)
+            )
+        )
+        return self
+
+    async def get_state(self, state_key: Any) -> TProjection | None:
+        if state_key == PROJECTION_STATE_KEY:
+            return self.projection
+        return None

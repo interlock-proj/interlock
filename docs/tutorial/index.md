@@ -9,6 +9,7 @@ Throughout this tutorial, you'll build a **Bank Account** application that demon
 - Creating and managing aggregates
 - Handling commands and emitting events
 - Processing events to build read models
+- Querying read models with typed queries
 - Using middleware for cross-cutting concerns
 - Structuring your application with conventions
 
@@ -26,9 +27,10 @@ Throughout this tutorial, you'll build a **Bank Account** application that demon
 | [Commands & Handlers](02-commands-and-handlers.md) | Define commands and handle them in aggregates |
 | [Events & Sourcing](03-events-and-sourcing.md) | Emit events and rebuild state from event history |
 | [Event Processors](04-event-processors.md) | React to events and build read models |
-| [Middleware](05-middleware.md) | Add logging, idempotency, and more |
-| [Structuring Your Application](06-structuring-the-application.md) | Organize your code with conventions |
-| [Putting It Together](07-putting-it-together.md) | Build a complete application |
+| [Queries & Projections](05-queries-and-projections.md) | Serve typed queries from read models |
+| [Middleware](06-middleware.md) | Add logging, caching, and more |
+| [Structuring Your Application](07-structuring-the-application.md) | Organize your code with conventions |
+| [Putting It Together](08-putting-it-together.md) | Build a complete application |
 
 ## Getting Help
 
@@ -39,4 +41,3 @@ If you get stuck:
 - Open an issue on [GitHub](https://github.com/interlock-proj/interlock/issues)
 
 Ready? Let's start with [Your First Aggregate](01-your-first-aggregate.md)!
-

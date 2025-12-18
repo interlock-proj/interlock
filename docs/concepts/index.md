@@ -47,6 +47,14 @@ This section provides in-depth explanations of the patterns and principles behin
 
     [:octicons-arrow-right-24: Learn about Commands](commands.md)
 
+-   :material-magnify:{ .lg .middle } __Queries__
+
+    ---
+
+    Messages that request data without changing state
+
+    [:octicons-arrow-right-24: Learn about Queries](queries.md)
+
 -   :material-lightning-bolt:{ .lg .middle } __Events__
 
     ---
@@ -59,9 +67,17 @@ This section provides in-depth explanations of the patterns and principles behin
 
     ---
 
-    Components that react to events and build read models
+    Components that react to events for side effects and integrations
 
     [:octicons-arrow-right-24: Learn about Event Processors](event-processors.md)
+
+-   :material-database-search:{ .lg .middle } __Projections__
+
+    ---
+
+    Read models that handle events and serve typed queries
+
+    [:octicons-arrow-right-24: Learn about Projections](projections.md)
 
 </div>
 
@@ -75,19 +91,19 @@ flowchart LR
     end
     
     EVT --> STORE[(Event Store)]
-    STORE --> PROC[Event Processors]
+    STORE --> PROJ[Projections]
     
     subgraph "Read Side"
-        PROC --> PROJ[Projections]
-        PROJ --> QUERY[Queries]
+        QRY[Queries] --> PROJ
+        PROJ --> RES[Responses]
     end
 ```
 
 1. **Commands** express user intent ("deposit $100")
 2. **Aggregates** validate business rules and emit **events**
 3. **Events** are persisted to the event store
-4. **Event Processors** consume events to build read models
-5. **Queries** read from optimized projections
+4. **Projections** consume events to build read models
+5. **Queries** request data from projections, which return typed **responses**
 
 ## Why These Patterns?
 

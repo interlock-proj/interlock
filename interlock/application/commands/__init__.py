@@ -12,7 +12,7 @@ from .bus import (
 __all__ = [
     "CommandBus",
     "CommandHandler",
-    "CommandMiddleware",
+    "CommandMiddleware",  # Backward compatibility alias for Middleware
     "DelegateToAggregate",
     "CommandToAggregateMap",
     "AggregateToRepositoryMap",
