@@ -9,7 +9,7 @@ Build your first event-sourced application in 5 minutes.
 
 ```python
 from pydantic import BaseModel
-from ulid import ULID
+from uuid import UUID, uuid4
 
 from interlock.domain import Aggregate, Command, Query
 from interlock.routing import handles_command, applies_event
@@ -23,7 +23,7 @@ class DepositMoney(Command[None]):
 
 # Define queries (read operations)
 class GetBalance(Query[int]):
-    account_id: ULID
+    account_id: UUID
 
 # Define event data
 class AccountOpened(BaseModel):
@@ -67,10 +67,10 @@ from interlock.routing import handles_event, handles_query
 class BalanceProjection(Projection):
     def __init__(self):
         super().__init__()
-        self.balances: dict[ULID, int] = {}
+        self.balances: dict[UUID, int] = {}
 
     @handles_event
-    async def on_deposit(self, event: MoneyDeposited, aggregate_id: ULID) -> None:
+    async def on_deposit(self, event: MoneyDeposited, aggregate_id: UUID) -> None:
         current = self.balances.get(aggregate_id, 0)
         self.balances[aggregate_id] = current + event.amount
 
@@ -98,7 +98,7 @@ app = (
 async def main():
     async with app:
         # Create a new account
-        account_id = ULID()
+        account_id = uuid4()
         await app.dispatch(OpenAccount(
             aggregate_id=account_id,
             owner_name="Alice"

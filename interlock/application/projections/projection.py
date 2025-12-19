@@ -5,10 +5,10 @@ providing a unified abstraction for the read side of CQRS.
 """
 
 import inspect
-from typing import TYPE_CHECKING, Any, ClassVar, TypeVar
+from typing import TYPE_CHECKING, ClassVar, TypeVar
 
 from ...domain import Query
-from ...routing import setup_event_handling, setup_query_routing
+from ...routing import setup_query_routing
 from ..events.processing import EventProcessor
 
 if TYPE_CHECKING:
@@ -78,16 +78,16 @@ class Projection(EventProcessor):
         >>> from interlock.domain import Query
         >>>
         >>> class GetUserById(Query[UserProfile]):
-        ...     user_id: ULID
+        ...     user_id: UUID
         >>>
-        >>> class GetUserByEmail(Query[ULID | None]):
+        >>> class GetUserByEmail(Query[UUID | None]):
         ...     email: str
         >>>
         >>> class UserProjection(Projection):
         ...     def __init__(self):
         ...         super().__init__()
-        ...         self.users: dict[ULID, UserProfile] = {}
-        ...         self.email_index: dict[str, ULID] = {}
+        ...         self.users: dict[UUID, UserProfile] = {}
+        ...         self.email_index: dict[str, UUID] = {}
         ...
         ...     @handles_event
         ...     async def on_user_created(self, event: UserCreated) -> None:
@@ -104,7 +104,7 @@ class Projection(EventProcessor):
         ...         return self.users[query.user_id]
         ...
         ...     @handles_query
-        ...     async def find_by_email(self, q: GetUserByEmail) -> ULID | None:
+        ...     async def find_by_email(self, q: GetUserByEmail) -> UUID | None:
         ...         return self.email_index.get(q.email)
     """
 

@@ -56,7 +56,7 @@ from interlock.domain import Event
 
 # The full event structure
 event = Event(
-    id=ULID(),                    # Unique event ID
+    id=uuid4(),                    # Unique event ID
     aggregate_id=account_id,      # Which aggregate emitted this
     data=MoneyDeposited(amount=100),  # Your event data
     sequence_number=5,            # Position in aggregate's stream
@@ -75,12 +75,12 @@ Every event automatically includes:
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `id` | `ULID` | Unique identifier for this event |
-| `aggregate_id` | `ULID` | The aggregate that produced this event |
+| `id` | `UUID` | Unique identifier for this event |
+| `aggregate_id` | `UUID` | The aggregate that produced this event |
 | `sequence_number` | `int` | Position in the aggregate's event stream |
 | `timestamp` | `datetime` | When the event occurred (UTC) |
-| `correlation_id` | `ULID \| None` | Links related events across a workflow |
-| `causation_id` | `ULID \| None` | The command that caused this event |
+| `correlation_id` | `UUID \| None` | Links related events across a workflow |
+| `causation_id` | `UUID \| None` | The command that caused this event |
 
 ### Accessing Event Metadata in Processors
 

@@ -2,9 +2,9 @@
 
 import logging
 from unittest.mock import AsyncMock
+from uuid import uuid4
 
 import pytest
-from ulid import ULID
 
 from interlock.application.middleware import LoggingMiddleware
 from interlock.context import ExecutionContext, clear_context, set_context
@@ -20,7 +20,7 @@ class SampleCommand(Command):
 @pytest.fixture
 def command():
     """Fixture for a test command."""
-    return SampleCommand(aggregate_id=ULID())
+    return SampleCommand(aggregate_id=uuid4())
 
 
 @pytest.fixture(autouse=True)
@@ -95,9 +95,9 @@ async def test_logging_middleware_logs_with_full_context(command, caplog):
     next_handler = AsyncMock()
 
     # Set up full execution context
-    correlation_id = ULID()
-    causation_id = ULID()
-    command_id = ULID()
+    correlation_id = uuid4()
+    causation_id = uuid4()
+    command_id = uuid4()
 
     ctx = ExecutionContext(
         correlation_id=correlation_id,
@@ -126,7 +126,7 @@ async def test_logging_middleware_logs_with_partial_context(command, caplog):
     next_handler = AsyncMock()
 
     # Set up partial context (only correlation_id)
-    correlation_id = ULID()
+    correlation_id = uuid4()
     ctx = ExecutionContext(
         correlation_id=correlation_id,
         causation_id=None,
@@ -253,8 +253,8 @@ async def test_logging_middleware_multiple_commands_separate_logs(caplog):
     middleware = LoggingMiddleware("INFO")
     next_handler = AsyncMock()
 
-    command1 = SampleCommand(aggregate_id=ULID())
-    command2 = SampleCommand(aggregate_id=ULID())
+    command1 = SampleCommand(aggregate_id=uuid4())
+    command2 = SampleCommand(aggregate_id=uuid4())
 
     with caplog.at_level(logging.INFO):
         await middleware.log_command(command1, next_handler)
@@ -271,7 +271,7 @@ async def test_logging_middleware_with_correlation_id_only(command, caplog):
     middleware = LoggingMiddleware("INFO")
     next_handler = AsyncMock()
 
-    correlation_id = ULID()
+    correlation_id = uuid4()
     ctx = ExecutionContext(
         correlation_id=correlation_id,
         causation_id=None,
@@ -296,7 +296,7 @@ async def test_logging_middleware_with_causation_id_only(command, caplog):
     middleware = LoggingMiddleware("INFO")
     next_handler = AsyncMock()
 
-    causation_id = ULID()
+    causation_id = uuid4()
     ctx = ExecutionContext(
         correlation_id=None,
         causation_id=causation_id,
@@ -318,7 +318,7 @@ async def test_logging_middleware_with_command_id_only(command, caplog):
     middleware = LoggingMiddleware("INFO")
     next_handler = AsyncMock()
 
-    command_id = ULID()
+    command_id = uuid4()
     ctx = ExecutionContext(
         correlation_id=None,
         causation_id=None,

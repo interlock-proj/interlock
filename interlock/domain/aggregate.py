@@ -1,8 +1,8 @@
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any, ClassVar, TypeVar
+from uuid import UUID, uuid4
 
 from pydantic import BaseModel, Field
-from ulid import ULID
 
 from ..context import get_context
 from ..routing import setup_command_routing, setup_event_applying
@@ -77,7 +77,7 @@ class Aggregate(BaseModel):
             persisted to the event store. This field is excluded from serialization.
     """
 
-    id: ULID = Field(default_factory=ULID)
+    id: UUID = Field(default_factory=uuid4)
     version: int = 0
     last_snapshot_time: datetime = Field(default_factory=utc_now)
     last_event_time: datetime = Field(default_factory=utc_now)

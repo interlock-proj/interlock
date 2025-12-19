@@ -2,9 +2,9 @@
 
 import asyncio
 from unittest.mock import AsyncMock
+from uuid import uuid4
 
 import pytest
-from ulid import ULID
 
 from interlock.application.middleware import ConcurrencyRetryMiddleware
 from interlock.domain import Command
@@ -20,7 +20,7 @@ class SampleCommand(Command):
 @pytest.fixture
 def command():
     """Fixture for a test command."""
-    return SampleCommand(aggregate_id=ULID())
+    return SampleCommand(aggregate_id=uuid4())
 
 
 def test_middleware_validates_max_attempts_positive():

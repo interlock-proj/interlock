@@ -2,9 +2,9 @@
 
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from uuid import UUID, uuid4
 
 import pytest
-from ulid import ULID
 
 from interlock.application import ApplicationBuilder
 from interlock.application.events import InMemoryEventStore, InMemoryEventTransport
@@ -19,25 +19,25 @@ from tests.fixtures.test_app import (
 
 
 @pytest.fixture
-def aggregate_id() -> ULID:
+def aggregate_id() -> UUID:
     """Generate a unique aggregate ID."""
-    return ULID()
+    return uuid4()
 
 
 @pytest.fixture
-def account_id() -> ULID:
+def account_id() -> UUID:
     """Generate a unique account ID."""
-    return ULID()
+    return uuid4()
 
 
 @pytest.fixture
-def correlation_id() -> ULID:
+def correlation_id() -> UUID:
     """Generate a unique correlation ID."""
-    return ULID()
+    return uuid4()
 
 
 @pytest.fixture
-def bank_account(aggregate_id: ULID) -> BankAccount:
+def bank_account(aggregate_id: UUID) -> BankAccount:
     """Create a BankAccount aggregate instance."""
     return BankAccount(id=aggregate_id)
 
@@ -48,7 +48,7 @@ def bank_account_repository(bank_account: BankAccount):
 
     class BankAccountRepository:
         @asynccontextmanager
-        async def acquire(self, aggregate_id: ULID) -> AsyncIterator[BankAccount]:
+        async def acquire(self, aggregate_id: UUID) -> AsyncIterator[BankAccount]:
             yield bank_account
 
     return BankAccountRepository()

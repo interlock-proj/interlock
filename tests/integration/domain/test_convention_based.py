@@ -20,9 +20,9 @@ async def test_convention_based_discovers_aggregates():
     )
 
     # Verify aggregates were discovered by successfully dispatching a command
-    from ulid import ULID
+    from uuid import uuid4
 
-    account_id = ULID()
+    account_id = uuid4()
     # If this works, the aggregate was discovered and registered
     await app.dispatch(OpenAccount(aggregate_id=account_id, owner="Alice"))
 
@@ -40,10 +40,9 @@ async def test_convention_based_discovers_commands():
 
     # Verify commands work by dispatching them
     from decimal import Decimal
+    from uuid import uuid4
 
-    from ulid import ULID
-
-    account_id = ULID()
+    account_id = uuid4()
     # If these work, commands were discovered
     await app.dispatch(OpenAccount(aggregate_id=account_id, owner="Bob"))
     await app.dispatch(DepositMoney(aggregate_id=account_id, amount=Decimal("100")))
@@ -103,10 +102,9 @@ async def test_multiple_convention_based_calls_accumulate():
 
     # Should still work (last registration wins for duplicates)
     from decimal import Decimal
+    from uuid import uuid4
 
-    from ulid import ULID
-
-    account_id = ULID()
+    account_id = uuid4()
     # If these work, multiple calls worked correctly
     await app.dispatch(OpenAccount(aggregate_id=account_id, owner="Charlie"))
     await app.dispatch(DepositMoney(aggregate_id=account_id, amount=Decimal("50")))

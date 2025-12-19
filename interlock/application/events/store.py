@@ -3,8 +3,7 @@
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from typing import Any
-
-from ulid import ULID
+from uuid import UUID
 
 from ...domain import Event
 from ...domain.exceptions import ConcurrencyError
@@ -52,7 +51,7 @@ class EventStore(ABC):
     @abstractmethod
     async def load_events(
         self,
-        aggregate_id: ULID,
+        aggregate_id: UUID,
         min_version: int,
     ) -> list[Event[Any]]:
         """Load events for an aggregate from the event store.
@@ -113,7 +112,7 @@ class InMemoryEventStore(EventStore):
 
     def __init__(self) -> None:
         """Initialize an empty in-memory event store."""
-        self.by_aggregate_id: dict[ULID, list[Event[Any]]] = defaultdict(list)
+        self.by_aggregate_id: dict[UUID, list[Event[Any]]] = defaultdict(list)
 
     async def save_events(
         self,
@@ -147,7 +146,7 @@ class InMemoryEventStore(EventStore):
 
     async def load_events(
         self,
-        aggregate_id: ULID,
+        aggregate_id: UUID,
         min_version: int,
     ) -> list[Event[Any]]:
         """Load events for an aggregate starting from a minimum version.

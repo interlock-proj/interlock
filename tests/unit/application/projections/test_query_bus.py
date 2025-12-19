@@ -1,8 +1,8 @@
 """Tests for QueryBus and query routing infrastructure."""
 
+from uuid import UUID, uuid4
+
 import pytest
-from pydantic import BaseModel
-from ulid import ULID
 
 from interlock.application.middleware import Handler, Middleware
 from interlock.application.projections import (
@@ -18,14 +18,14 @@ from interlock.routing import handles_query, intercepts
 
 # Test queries (bank account domain)
 class GetAccountById(Query[dict]):
-    account_id: ULID
+    account_id: UUID
 
 
 class GetAccountBalance(Query[int]):
-    account_id: ULID
+    account_id: UUID
 
 
-class GetAccountByEmail(Query[ULID | None]):
+class GetAccountByEmail(Query[UUID | None]):
     email: str
 
 
@@ -37,11 +37,11 @@ class CountAccounts(Query[int]):
 class AccountProjection(Projection):
     def __init__(self):
         super().__init__()
-        self.accounts: dict[ULID, dict] = {}
-        self.email_index: dict[str, ULID] = {}
+        self.accounts: dict[UUID, dict] = {}
+        self.email_index: dict[str, UUID] = {}
 
     def add_account(
-        self, account_id: ULID, owner_name: str, email: str, balance: int = 0
+        self, account_id: UUID, owner_name: str, email: str, balance: int = 0
     ) -> None:
         """Helper to add accounts for testing."""
         self.accounts[account_id] = {
@@ -61,7 +61,7 @@ class AccountProjection(Projection):
         return self.accounts[query.account_id]["balance"]
 
     @handles_query
-    async def get_account_by_email(self, query: GetAccountByEmail) -> ULID | None:
+    async def get_account_by_email(self, query: GetAccountByEmail) -> UUID | None:
         return self.email_index.get(query.email)
 
     @handles_query
@@ -88,7 +88,7 @@ class TestQueryToProjectionMap:
 
     def test_from_multiple_projections(self):
         class GetTransactionHistory(Query[list]):
-            account_id: ULID
+            account_id: UUID
 
         class TransactionProjection(Projection):
             @handles_query
@@ -126,7 +126,7 @@ class TestDelegateToProjection:
     async def test_delegates_to_correct_projection(self):
         # Set up projection with data
         projection = AccountProjection()
-        account_id = ULID()
+        account_id = uuid4()
         projection.add_account(account_id, "Alice", "alice@test.com", balance=1000)
 
         # Set up routing
@@ -143,8 +143,8 @@ class TestDelegateToProjection:
     @pytest.mark.asyncio
     async def test_handles_different_query_types(self):
         projection = AccountProjection()
-        projection.add_account(ULID(), "Alice", "alice@test.com", balance=500)
-        projection.add_account(ULID(), "Bob", "bob@test.com", balance=1500)
+        projection.add_account(uuid4(), "Alice", "alice@test.com", balance=500)
+        projection.add_account(uuid4(), "Bob", "bob@test.com", balance=1500)
 
         query_map = QueryToProjectionMap.from_projections([AccountProjection])
         registry = ProjectionRegistry.from_projections([projection])
@@ -157,7 +157,7 @@ class TestDelegateToProjection:
     @pytest.mark.asyncio
     async def test_handles_balance_query(self):
         projection = AccountProjection()
-        account_id = ULID()
+        account_id = uuid4()
         projection.add_account(account_id, "Charlie", "charlie@test.com", balance=2500)
 
         query_map = QueryToProjectionMap.from_projections([AccountProjection])
@@ -175,7 +175,7 @@ class TestQueryBus:
     @pytest.mark.asyncio
     async def test_dispatches_without_middleware(self):
         projection = AccountProjection()
-        account_id = ULID()
+        account_id = uuid4()
         projection.add_account(account_id, "Alice", "alice@test.com", balance=1000)
 
         query_map = QueryToProjectionMap.from_projections([AccountProjection])
@@ -201,7 +201,7 @@ class TestQueryBus:
                 return result
 
         projection = AccountProjection()
-        account_id = ULID()
+        account_id = uuid4()
         projection.add_account(account_id, "Bob", "bob@test.com", balance=500)
 
         query_map = QueryToProjectionMap.from_projections([AccountProjection])
@@ -225,7 +225,7 @@ class TestQueryBus:
                 return result
 
         projection = AccountProjection()
-        account_id = ULID()
+        account_id = uuid4()
         projection.add_account(account_id, "Charlie", "charlie@test.com")
 
         query_map = QueryToProjectionMap.from_projections([AccountProjection])
@@ -259,7 +259,7 @@ class TestQueryBus:
                 return result
 
         projection = AccountProjection()
-        projection.add_account(ULID(), "Test", "test@test.com")
+        projection.add_account(uuid4(), "Test", "test@test.com")
 
         query_map = QueryToProjectionMap.from_projections([AccountProjection])
         registry = ProjectionRegistry.from_projections([projection])
@@ -280,7 +280,7 @@ class TestQueryBus:
     @pytest.mark.asyncio
     async def test_email_lookup_query(self):
         projection = AccountProjection()
-        account_id = ULID()
+        account_id = uuid4()
         projection.add_account(account_id, "Diana", "diana@test.com", balance=750)
 
         query_map = QueryToProjectionMap.from_projections([AccountProjection])

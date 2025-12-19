@@ -66,7 +66,7 @@ In Interlock, aggregates extend the `Aggregate` base class:
 from interlock.domain import Aggregate, Command, Event
 from interlock.routing import handles_command, applies_event
 from pydantic import BaseModel
-from ulid import ULID
+from uuid import UUID, uuid4
 
 # Commands - express intent
 class DepositMoney(Command):
@@ -119,7 +119,7 @@ Every aggregate automatically includes:
 
 | Property | Type | Description |
 |----------|------|-------------|
-| `id` | `ULID` | Unique identifier (auto-generated) |
+| `id` | `UUID` | Unique identifier (auto-generated) |
 | `version` | `int` | Incremented with each event (for concurrency control) |
 | `uncommitted_events` | `list` | Events emitted but not yet persisted |
 
@@ -231,7 +231,7 @@ class CustomerProfile(Aggregate):
     preferences: Preferences
 
 class Order(Aggregate):
-    customer_id: ULID  # Reference by ID
+    customer_id: UUID  # Reference by ID
     items: list[OrderItem]
     status: OrderStatus
 ```
@@ -265,7 +265,7 @@ class Order(Aggregate):
 
 # Right - reference by ID
 class Order(Aggregate):
-    customer_id: ULID  # ✓
+    customer_id: UUID  # ✓
 ```
 
 ### Protect Invariants

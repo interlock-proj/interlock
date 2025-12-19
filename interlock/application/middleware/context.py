@@ -6,8 +6,7 @@ and sets up the execution context before command execution.
 """
 
 from typing import Any
-
-from ulid import ULID
+from uuid import uuid4
 
 from ...context import ExecutionContext, clear_context, set_context
 from ...domain import Command
@@ -87,7 +86,7 @@ class ContextPropagationMiddleware(Middleware):
         correlation_id = command.correlation_id
         if correlation_id is None:
             # Entry point: generate new correlation_id
-            correlation_id = ULID()
+            correlation_id = uuid4()
 
         causation_id = command.causation_id
         if causation_id is None:

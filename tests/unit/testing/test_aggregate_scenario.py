@@ -1,7 +1,7 @@
 from decimal import Decimal
+from uuid import UUID, uuid4
 
 import pytest
-from ulid import ULID
 
 from interlock.testing import AggregateScenario
 from tests.fixtures.test_app import (
@@ -150,7 +150,7 @@ async def test_scenario_chainable_api():
 
 @pytest.mark.asyncio
 async def test_custom_id_works_with_context_manager():
-    custom_id = ULID()
+    custom_id = uuid4()
     async with AggregateScenario(BankAccount, aggregate_id=custom_id) as scenario:
         assert scenario.aggregate_id == custom_id
         scenario.when(OpenAccount(aggregate_id=scenario.aggregate_id, owner="Paula")).should_emit(
@@ -161,16 +161,16 @@ async def test_custom_id_works_with_context_manager():
 def test_scenario_auto_generates_aggregate_id():
     scenario = AggregateScenario(BankAccount)
     assert scenario.aggregate_id is not None
-    assert isinstance(scenario.aggregate_id, ULID)
+    assert isinstance(scenario.aggregate_id, UUID)
 
 
 def test_scenario_uses_custom_aggregate_id():
-    custom_id = ULID()
+    custom_id = uuid4()
     scenario = AggregateScenario(BankAccount, aggregate_id=custom_id)
     assert scenario.aggregate_id == custom_id
 
 
 def test_scenario_passes_id_to_aggregate():
-    custom_id = ULID()
+    custom_id = uuid4()
     scenario = AggregateScenario(BankAccount, aggregate_id=custom_id)
     assert scenario.aggregate.id == custom_id

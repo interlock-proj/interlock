@@ -72,13 +72,13 @@ First, define the state your saga needs to track:
 ```python
 from pydantic import BaseModel
 from decimal import Decimal
-from ulid import ULID
+from uuid import UUID, uuid4
 
 class TransferState(BaseModel):
     """State for a money transfer saga."""
     transfer_id: str
-    from_account: ULID
-    to_account: ULID
+    from_account: UUID
+    to_account: UUID
     amount: Decimal
     source_withdrawn: bool = False
     target_deposited: bool = False
@@ -414,7 +414,7 @@ class MoneyTransferSaga(Saga[TransferState]):
             # Compensate: refund the source account
             await self.command_bus.dispatch(
                 DepositMoney(
-                    aggregate_id=state.from_account,  # Already a ULID
+                    aggregate_id=state.from_account,  # Already a UUID
                     amount=int(state.amount),
                 )
             )

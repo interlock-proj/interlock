@@ -1,8 +1,8 @@
 from collections.abc import Callable
 from typing import Any, Generic, TypeVar, cast
+from uuid import uuid4
 
 from pydantic import BaseModel
-from ulid import ULID
 
 from interlock.application.events import EventProcessor, Saga
 from interlock.application.projections import Projection
@@ -47,7 +47,7 @@ class ProcessorScenario(Scenario[Any], Generic[TProcessor]):
 
     async def perform_actions(self) -> None:
         # Wrap payloads in Event objects for handlers with Event[T] annotations
-        aggregate_id = ULID()  # Use a consistent aggregate ID for test events
+        aggregate_id = uuid4()  # Use a consistent aggregate ID for test events
         for i, event_payload in enumerate(self.event_payloads, start=1):
             event = Event(
                 aggregate_id=aggregate_id,
@@ -99,7 +99,7 @@ class SagaScenario(Scenario[TSagaState], Generic[TSaga, TSagaState]):
 
     async def perform_actions(self) -> None:
         # Wrap payloads in Event objects for handlers with Event[T] annotations
-        aggregate_id = ULID()  # Use a consistent aggregate ID for test events
+        aggregate_id = uuid4()  # Use a consistent aggregate ID for test events
         for i, event_payload in enumerate(self.event_payloads, start=1):
             event = Event(
                 aggregate_id=aggregate_id,
@@ -155,7 +155,7 @@ class ProjectionScenario(Scenario[Any], Generic[TProjection]):
 
     async def perform_actions(self) -> None:
         # Wrap payloads in Event objects for handlers with Event[T] annotations
-        aggregate_id = ULID()
+        aggregate_id = uuid4()
         for i, event_payload in enumerate(self.event_payloads, start=1):
             event = Event(
                 aggregate_id=aggregate_id,

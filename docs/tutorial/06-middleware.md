@@ -91,14 +91,14 @@ async def test_middleware_blocks_fraudulent_deposits(app_with_fraud_detection):
     async with app_with_fraud_detection:
         with pytest.raises(FraudDetectedError):
             await app_with_fraud_detection.dispatch(
-                DepositMoney(aggregate_id=ULID(), amount=100)
+                DepositMoney(aggregate_id=uuid4(), amount=100)
             )
 
 async def test_middleware_allows_clean_deposits(app_without_fraud):
     async with app_without_fraud:
         # Should not raise - deposit goes through
         await app_without_fraud.dispatch(
-            DepositMoney(aggregate_id=ULID(), amount=100)
+            DepositMoney(aggregate_id=uuid4(), amount=100)
         )
 ```
 

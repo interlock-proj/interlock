@@ -25,7 +25,7 @@ pip install interlock
 
 ```python
 from pydantic import BaseModel
-from ulid import ULID
+from uuid import UUID, uuid4
 
 from interlock.application import ApplicationBuilder, Projection
 from interlock.domain import Aggregate, Command, Query
@@ -64,14 +64,14 @@ class BankAccount(Aggregate):
 class BalanceProjection(Projection):
     def __init__(self):
         super().__init__()
-        self.balances: dict[ULID, int] = {}
+        self.balances: dict[UUID, int] = {}
 
     @handles_event
-    async def on_deposit(self, event: MoneyDeposited, aggregate_id: ULID) -> None:
+    async def on_deposit(self, event: MoneyDeposited, aggregate_id: UUID) -> None:
         self.balances[aggregate_id] = self.balances.get(aggregate_id, 0) + event.amount
 
     @handles_query
-    async def get_balance(self, query: GetBalance, aggregate_id: ULID) -> int:
+    async def get_balance(self, query: GetBalance, aggregate_id: UUID) -> int:
         return self.balances.get(aggregate_id, 0)
 
 
@@ -85,7 +85,7 @@ async def main():
     )
 
     async with app:
-        account_id = ULID()
+        account_id = uuid4()
         
         # Write: dispatch commands
         await app.dispatch(DepositMoney(aggregate_id=account_id, amount=100))

@@ -1,6 +1,5 @@
 from typing import Any
-
-from ulid import ULID
+from uuid import UUID
 
 from ...domain import Event
 from .delivery import EventDelivery
@@ -77,7 +76,7 @@ class EventBus:
 
     async def load_events(
         self,
-        aggregate_id: ULID,
+        aggregate_id: UUID,
         min_version: int,
     ) -> list[Event[Any]]:
         """Load events from storage with schema evolution applied.

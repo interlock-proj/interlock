@@ -134,7 +134,7 @@ Implement `AggregateSnapshotStorageBackend` for your storage:
 ```python
 from interlock.application.aggregates import AggregateSnapshotStorageBackend
 from interlock.domain import Aggregate
-from ulid import ULID
+from uuid import UUID, uuid4
 from typing import TypeVar
 
 T = TypeVar("T", bound=Aggregate)
@@ -161,7 +161,7 @@ class PostgresSnapshotBackend(AggregateSnapshotStorageBackend):
     
     async def load_snapshot(
         self, 
-        aggregate_id: ULID,
+        aggregate_id: UUID,
         intended_version: int | None = None
     ) -> Aggregate | None:
         async with self.pool.acquire() as conn:
@@ -235,14 +235,14 @@ Implement `AggregateCacheBackend` for your cache:
 ```python
 from interlock.application.aggregates import AggregateCacheBackend
 from interlock.domain import Aggregate
-from ulid import ULID
+from uuid import UUID, uuid4
 
 class RedisAggregateCacheBackend(AggregateCacheBackend):
     def __init__(self, redis_client):
         self.redis = redis_client
         self.ttl = 3600  # 1 hour
     
-    async def get_aggregate(self, aggregate_id: ULID) -> Aggregate | None:
+    async def get_aggregate(self, aggregate_id: UUID) -> Aggregate | None:
         data = await self.redis.get(f"agg:{aggregate_id}")
         if data:
             return Aggregate.model_validate_json(data)
@@ -255,7 +255,7 @@ class RedisAggregateCacheBackend(AggregateCacheBackend):
             aggregate.model_dump_json()
         )
     
-    async def remove_aggregate(self, aggregate_id: ULID) -> None:
+    async def remove_aggregate(self, aggregate_id: UUID) -> None:
         await self.redis.delete(f"agg:{aggregate_id}")
 ```
 

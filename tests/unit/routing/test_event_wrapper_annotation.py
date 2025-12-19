@@ -1,10 +1,10 @@
 """Tests for Event[T] wrapper annotation in event handlers."""
 
 from decimal import Decimal
+from uuid import UUID, uuid4
 
 import pytest
 from pydantic import BaseModel
-from ulid import ULID
 
 from interlock.application.events.processing import EventProcessor
 from interlock.domain import Event
@@ -46,7 +46,7 @@ class WrapperProcessor(EventProcessor):
 
     def __init__(self):
         self.received_events: list[Event[BaseModel]] = []
-        self.received_aggregate_ids: list[ULID] = []
+        self.received_aggregate_ids: list[UUID] = []
         self.received_sequence_numbers: list[int] = []
 
     @handles_event
@@ -84,7 +84,7 @@ async def test_payload_annotation_receives_payload():
     event_data = MoneyDeposited(amount=Decimal("100.00"))
 
     # Simulate what the executor does - pass an Event wrapper
-    aggregate_id = ULID()
+    aggregate_id = uuid4()
     event = Event(
         aggregate_id=aggregate_id,
         data=event_data,
@@ -104,7 +104,7 @@ async def test_wrapper_annotation_receives_full_event():
     processor = WrapperProcessor()
     event_data = MoneyDeposited(amount=Decimal("100.00"))
 
-    aggregate_id = ULID()
+    aggregate_id = uuid4()
     event = Event(
         aggregate_id=aggregate_id,
         data=event_data,
@@ -124,7 +124,7 @@ async def test_mixed_processor_handles_both_styles():
     """Test that a processor can have both annotation styles."""
     processor = MixedProcessor()
 
-    aggregate_id = ULID()
+    aggregate_id = uuid4()
 
     # Send a MoneyDeposited event (payload handler)
     deposit_data = MoneyDeposited(amount=Decimal("50.00"))
@@ -189,9 +189,9 @@ async def test_wrapper_annotation_access_to_metadata():
     """Test that wrapper annotation provides access to all event metadata."""
     processor = WrapperProcessor()
 
-    correlation_id = ULID()
-    causation_id = ULID()
-    aggregate_id = ULID()
+    correlation_id = uuid4()
+    causation_id = uuid4()
+    aggregate_id = uuid4()
 
     event = Event(
         aggregate_id=aggregate_id,

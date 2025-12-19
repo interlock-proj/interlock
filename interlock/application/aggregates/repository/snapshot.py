@@ -2,8 +2,7 @@ from abc import ABC, abstractmethod
 from collections import defaultdict
 from datetime import timedelta
 from typing import TYPE_CHECKING, Optional
-
-from ulid import ULID
+from uuid import UUID
 
 if TYPE_CHECKING:
     from ....domain import Aggregate
@@ -45,7 +44,7 @@ class AggregateSnapshotStorageBackend(ABC):
     @abstractmethod
     async def load_snapshot(
         self,
-        aggregate_id: ULID,
+        aggregate_id: UUID,
         intended_version: int | None = None,
     ) -> Optional["Aggregate"]:
         """Load a snapshot of the aggregate.
@@ -63,7 +62,7 @@ class AggregateSnapshotStorageBackend(ABC):
         None, return the latest snapshot. If there is no snapshot, return None.
 
         Args:
-            aggregate_id (ULID): The id of the aggregate to load.
+            aggregate_id (UUID): The id of the aggregate to load.
             intended_version (Optional[int], optional): The intended version
                 of the aggregate that is being loaded.
 
@@ -73,7 +72,7 @@ class AggregateSnapshotStorageBackend(ABC):
         ...
 
     @abstractmethod
-    async def list_aggregate_ids_by_type(self, aggregate_type: type["Aggregate"]) -> list[ULID]:
+    async def list_aggregate_ids_by_type(self, aggregate_type: type["Aggregate"]) -> list[UUID]:
         """Get all aggregate IDs of a given type that have snapshots.
 
         This is used by catchup strategies to discover all aggregates of a
@@ -89,7 +88,7 @@ class AggregateSnapshotStorageBackend(ABC):
         Example:
             >>> from app.aggregates import User
             >>> user_ids = await snapshot_backend.list_aggregate_ids_by_type(User)
-            >>> # [ULID('...'), ULID('...'), ...]
+            >>> # [UUID('...'), UUID('...'), ...]
         """
         ...
 
@@ -124,12 +123,12 @@ class NullAggregateSnapshotStorageBackend(AggregateSnapshotStorageBackend):
 
     async def load_snapshot(
         self,
-        aggregate_id: ULID,
+        aggregate_id: UUID,
         intended_version: int | None = None,
     ) -> Optional["Aggregate"]:
         return None
 
-    async def list_aggregate_ids_by_type(self, aggregate_type: type["Aggregate"]) -> list[ULID]:
+    async def list_aggregate_ids_by_type(self, aggregate_type: type["Aggregate"]) -> list[UUID]:
         """No snapshots stored, so return empty list."""
         return []
 
@@ -143,20 +142,20 @@ class InMemoryAggregateSnapshotStorageBackend(AggregateSnapshotStorageBackend):
     """
 
     def __init__(self) -> None:
-        self.snapshots: dict[ULID, list[Aggregate]] = defaultdict(list)
+        self.snapshots: dict[UUID, list[Aggregate]] = defaultdict(list)
 
     async def save_snapshot(self, aggregate: "Aggregate") -> None:
         self.snapshots[aggregate.id].append(aggregate)
 
     async def load_snapshot(
-        self, aggregate_id: ULID, intended_version: int | None = None
+        self, aggregate_id: UUID, intended_version: int | None = None
     ) -> Optional["Aggregate"]:
         for snapshot in reversed(self.snapshots[aggregate_id]):
             if intended_version is None or snapshot.version <= intended_version:
                 return snapshot
         return None
 
-    async def list_aggregate_ids_by_type(self, aggregate_type: type["Aggregate"]) -> list[ULID]:
+    async def list_aggregate_ids_by_type(self, aggregate_type: type["Aggregate"]) -> list[UUID]:
         """List all aggregate IDs that have snapshots of the given type.
 
         Args:

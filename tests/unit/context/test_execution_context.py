@@ -1,6 +1,6 @@
 """Tests for ExecutionContext class and context storage."""
 
-from ulid import ULID
+from uuid import UUID, uuid4
 
 from interlock.context import (
     ExecutionContext,
@@ -16,14 +16,14 @@ def test_create_context_with_defaults():
     ctx = ExecutionContext.create()
 
     assert ctx.correlation_id is not None
-    assert isinstance(ctx.correlation_id, ULID)
+    assert isinstance(ctx.correlation_id, UUID)
     assert ctx.causation_id == ctx.correlation_id  # Self-referencing at entry
     assert ctx.command_id is None
 
 
 def test_create_context_with_specific_correlation_id():
     """Context.create() should use provided correlation_id."""
-    correlation_id = ULID()
+    correlation_id = uuid4()
     ctx = ExecutionContext.create(correlation_id=correlation_id)
 
     assert ctx.correlation_id == correlation_id
@@ -33,7 +33,7 @@ def test_create_context_with_specific_correlation_id():
 def test_for_command():
     """Context.for_command() should set command_id."""
     ctx = ExecutionContext.create()
-    command_id = ULID()
+    command_id = uuid4()
     cmd_ctx = ctx.for_command(command_id)
 
     assert cmd_ctx.correlation_id == ctx.correlation_id
@@ -44,7 +44,7 @@ def test_for_command():
 def test_for_event():
     """Context.for_event() should set causation to event_id and clear command_id."""
     ctx = ExecutionContext.create()
-    event_id = ULID()
+    event_id = uuid4()
     evt_ctx = ctx.for_event(event_id)
 
     assert evt_ctx.correlation_id == ctx.correlation_id
@@ -55,7 +55,7 @@ def test_for_event():
 def test_with_causation():
     """Context.with_causation() should update causation_id."""
     ctx = ExecutionContext.create()
-    new_causation = ULID()
+    new_causation = uuid4()
     updated_ctx = ctx.with_causation(new_causation)
 
     assert updated_ctx.correlation_id == ctx.correlation_id
@@ -69,7 +69,7 @@ def test_context_immutability():
     original_correlation = ctx.correlation_id
 
     # Create modified context
-    command_id = ULID()
+    command_id = uuid4()
     new_ctx = ctx.for_command(command_id)
 
     # Original should be unchanged
@@ -119,7 +119,7 @@ def test_get_or_create_context_when_not_set():
     ctx = get_or_create_context()
 
     assert ctx.correlation_id is not None
-    assert isinstance(ctx.correlation_id, ULID)
+    assert isinstance(ctx.correlation_id, UUID)
 
 
 def test_get_or_create_context_when_already_set():

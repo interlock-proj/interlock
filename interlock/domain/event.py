@@ -1,8 +1,8 @@
 from datetime import datetime, timezone
 from typing import Generic, TypeVar
+from uuid import UUID, uuid4
 
 from pydantic import BaseModel, Field
-from ulid import ULID
 
 T = TypeVar("T", bound=BaseModel)
 
@@ -73,11 +73,11 @@ class Event(BaseModel, Generic[T]):
         ... )
     """
 
-    id: ULID = Field(
-        default_factory=ULID,
+    id: UUID = Field(
+        default_factory=uuid4,
         description="Unique identifier for this event instance",
     )
-    aggregate_id: ULID = Field(description="ID of the aggregate that produced this event")
+    aggregate_id: UUID = Field(description="ID of the aggregate that produced this event")
     data: T = Field(description="Typed event data conforming to schema T")
     sequence_number: int = Field(
         description="Position in aggregate's event stream (1-indexed, monotonically increasing)"
@@ -86,11 +86,11 @@ class Event(BaseModel, Generic[T]):
         default_factory=utc_now,
         description="When the event occurred (UTC timezone)",
     )
-    correlation_id: ULID | None = Field(
+    correlation_id: UUID | None = Field(
         default=None,
         description="Correlation ID for tracing the entire logical operation across services",
     )
-    causation_id: ULID | None = Field(
+    causation_id: UUID | None = Field(
         default=None,
         description="ID of what directly caused this event (typically the command_id)",
     )

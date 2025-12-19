@@ -21,7 +21,7 @@ class DepositMoney(Command[None]):
 
 # Query - requests data
 class GetAccountBalance(Query[int]):
-    account_id: ULID
+    account_id: UUID
 ```
 
 ## Defining Queries
@@ -31,28 +31,28 @@ Queries extend `Query[TResponse]` where `TResponse` is the expected return type:
 ```python
 from interlock.domain import Query
 from pydantic import BaseModel
-from ulid import ULID
+from uuid import UUID, uuid4
 
 class UserProfile(BaseModel):
-    id: ULID
+    id: UUID
     name: str
     email: str
 
 # Query that returns a UserProfile
 class GetUserById(Query[UserProfile]):
-    user_id: ULID
+    user_id: UUID
 
-# Query that returns an optional ULID (for lookups)
-class GetUserByEmail(Query[ULID | None]):
+# Query that returns an optional UUID (for lookups)
+class GetUserByEmail(Query[UUID | None]):
     email: str
 
 # Query that returns an int
 class GetAccountBalance(Query[int]):
-    account_id: ULID
+    account_id: UUID
 
 # Query that returns a list
 class ListRecentOrders(Query[list[Order]]):
-    user_id: ULID
+    user_id: UUID
     limit: int = 10
 ```
 
@@ -68,13 +68,13 @@ Every query automatically includes these fields:
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `query_id` | `ULID` | Unique identifier (auto-generated) |
-| `correlation_id` | `ULID \| None` | Links related operations |
-| `causation_id` | `ULID \| None` | What triggered this query |
+| `query_id` | `UUID` | Unique identifier (auto-generated) |
+| `correlation_id` | `UUID \| None` | Links related operations |
+| `causation_id` | `UUID \| None` | What triggered this query |
 
 ```python
 query = GetUserById(user_id=some_id)
-print(query.query_id)  # Auto-generated ULID
+print(query.query_id)  # Auto-generated UUID
 ```
 
 Unlike commands, queries don't have an `aggregate_id`—they're routed to 
@@ -118,7 +118,7 @@ async with app:
     user = await app.query(GetUserById(user_id=user_id))
     print(user.name)
     
-    # Find user by email (returns ULID | None)
+    # Find user by email (returns UUID | None)
     found_id = await app.query(GetUserByEmail(email="alice@example.com"))
     if found_id:
         print(f"Found user: {found_id}")
@@ -211,12 +211,12 @@ Queries support Pydantic validation:
 from pydantic import Field
 
 class ListRecentOrders(Query[list[Order]]):
-    user_id: ULID
+    user_id: UUID
     limit: int = Field(default=10, ge=1, le=100)  # 1-100 range
     offset: int = Field(default=0, ge=0)
 
 # This raises ValidationError
-ListRecentOrders(user_id=ULID(), limit=500)  # limit > 100
+ListRecentOrders(user_id=uuid4(), limit=500)  # limit > 100
 ```
 
 ## Common Patterns
@@ -226,7 +226,7 @@ ListRecentOrders(user_id=ULID(), limit=500)  # limit > 100
 Dereference natural identifiers to aggregate IDs:
 
 ```python
-class GetAccountIdByEmail(Query[ULID | None]):
+class GetAccountIdByEmail(Query[UUID | None]):
     """Find account aggregate ID by email address."""
     email: str
 
@@ -272,15 +272,15 @@ Each query should return data for a specific use case:
 ```python
 # Too broad - returns everything
 class GetUser(Query[User]):
-    user_id: ULID
+    user_id: UUID
 
 # Focused - returns what the profile page needs
 class GetUserProfile(Query[UserProfile]):
-    user_id: ULID
+    user_id: UUID
 
 # Focused - returns what the admin dashboard needs  
 class GetUserAdminView(Query[UserAdminDetails]):
-    user_id: ULID
+    user_id: UUID
 ```
 
 ### Include Necessary Parameters
@@ -294,7 +294,7 @@ class ListOrders(Query[list[Order]]):
 
 # Complete context
 class ListOrders(Query[list[Order]]):
-    user_id: ULID
+    user_id: UUID
     status: OrderStatus | None = None
     limit: int = 20
 ```
@@ -306,11 +306,11 @@ Return structured types, not dictionaries:
 ```python
 # Avoid - loses type safety
 class GetUser(Query[dict]):
-    user_id: ULID
+    user_id: UUID
 
 # Better - strongly typed
 class GetUser(Query[UserProfile]):
-    user_id: ULID
+    user_id: UUID
 ```
 
 ## Further Reading

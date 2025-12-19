@@ -359,7 +359,7 @@ infrastructure:
 ```python
 from interlock.application.events import EventStore
 from interlock.domain import Event
-from ulid import ULID
+from uuid import UUID, uuid4
 
 class MyCustomEventStore(EventStore):
     async def save_events(
@@ -373,7 +373,7 @@ class MyCustomEventStore(EventStore):
 
     async def load_events(
         self, 
-        aggregate_id: ULID, 
+        aggregate_id: UUID, 
         min_version: int
     ) -> list[Event]:
         # Load events from your storage

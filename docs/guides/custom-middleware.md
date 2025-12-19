@@ -211,8 +211,8 @@ class WithdrawMoney(FinancialCommand):
     ...
 
 class TransferMoney(FinancialCommand):
-    from_account: ULID
-    to_account: ULID
+    from_account: UUID
+    to_account: UUID
 
 # Middleware that intercepts all financial commands
 class FinancialComplianceMiddleware(Middleware):
@@ -481,7 +481,7 @@ async def test_audit_middleware_logs_commands(app_with_audit):
     app, stub = app_with_audit
     
     async with app:
-        await app.dispatch(DepositMoney(aggregate_id=ULID(), amount=100))
+        await app.dispatch(DepositMoney(aggregate_id=uuid4(), amount=100))
     
     assert len(stub.logged_operations) == 1
     assert isinstance(stub.logged_operations[0][0], DepositMoney)
@@ -489,7 +489,7 @@ async def test_audit_middleware_logs_commands(app_with_audit):
 @pytest.mark.asyncio
 async def test_audit_middleware_logs_queries(app_with_audit):
     app, stub = app_with_audit
-    account_id = ULID()
+    account_id = uuid4()
     
     async with app:
         # Set up account first

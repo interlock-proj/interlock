@@ -1,10 +1,10 @@
 """Tests for catchup strategies."""
 
 from datetime import datetime, timedelta, timezone
+from uuid import uuid4
 
 import pytest
 from pydantic import BaseModel
-from ulid import ULID
 
 from interlock.application.events.processing.processor import EventProcessor
 from interlock.application.events.processing.strategies import (
@@ -40,8 +40,8 @@ def test_catchup_result_should_skip_with_none():
     """Test should_skip returns False when skip_before is None."""
     result = CatchupResult(skip_before=None)
     event = Event(
-        id=ULID(),
-        aggregate_id=ULID(),
+        id=uuid4(),
+        aggregate_id=uuid4(),
         data=TestEvent(value="test"),
         sequence_number=1,
         timestamp=datetime.now(timezone.utc),
@@ -55,8 +55,8 @@ def test_catchup_result_should_skip_older_event():
     result = CatchupResult(skip_before=skip_before)
 
     old_event = Event(
-        id=ULID(),
-        aggregate_id=ULID(),
+        id=uuid4(),
+        aggregate_id=uuid4(),
         data=TestEvent(value="old"),
         sequence_number=1,
         timestamp=datetime(2025, 1, 1, 11, 0, 0, tzinfo=timezone.utc),
@@ -70,8 +70,8 @@ def test_catchup_result_should_skip_exact_timestamp():
     result = CatchupResult(skip_before=skip_before)
 
     exact_event = Event(
-        id=ULID(),
-        aggregate_id=ULID(),
+        id=uuid4(),
+        aggregate_id=uuid4(),
         data=TestEvent(value="exact"),
         sequence_number=1,
         timestamp=skip_before,
@@ -85,8 +85,8 @@ def test_catchup_result_should_not_skip_newer_event():
     result = CatchupResult(skip_before=skip_before)
 
     new_event = Event(
-        id=ULID(),
-        aggregate_id=ULID(),
+        id=uuid4(),
+        aggregate_id=uuid4(),
         data=TestEvent(value="new"),
         sequence_number=1,
         timestamp=datetime(2025, 1, 1, 13, 0, 0, tzinfo=timezone.utc),
@@ -101,8 +101,8 @@ def test_catchup_result_should_skip_boundary_cases():
 
     # One microsecond before
     just_before = Event(
-        id=ULID(),
-        aggregate_id=ULID(),
+        id=uuid4(),
+        aggregate_id=uuid4(),
         data=TestEvent(value="before"),
         sequence_number=1,
         timestamp=skip_before - timedelta(microseconds=1),
@@ -111,8 +111,8 @@ def test_catchup_result_should_skip_boundary_cases():
 
     # One microsecond after
     just_after = Event(
-        id=ULID(),
-        aggregate_id=ULID(),
+        id=uuid4(),
+        aggregate_id=uuid4(),
         data=TestEvent(value="after"),
         sequence_number=1,
         timestamp=skip_before + timedelta(microseconds=1),

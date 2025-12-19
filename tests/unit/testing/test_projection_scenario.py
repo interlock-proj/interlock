@@ -1,8 +1,9 @@
 """Tests for ProjectionScenario testing utility."""
 
+from uuid import UUID, uuid4
+
 import pytest
 from pydantic import BaseModel
-from ulid import ULID
 
 from interlock.application.projections import Projection
 from interlock.domain import Query
@@ -12,29 +13,29 @@ from interlock.testing import ProjectionScenario
 
 # Test events (bank account domain)
 class AccountOpened(BaseModel):
-    account_id: ULID
+    account_id: UUID
     owner_name: str
     email: str
     initial_balance: int = 0
 
 
 class MoneyDeposited(BaseModel):
-    account_id: ULID
+    account_id: UUID
     amount: int
 
 
 class MoneyWithdrawn(BaseModel):
-    account_id: ULID
+    account_id: UUID
     amount: int
 
 
 # Test queries
 class GetAccountById(Query[dict]):
-    account_id: ULID
+    account_id: UUID
 
 
 class GetAccountBalance(Query[int]):
-    account_id: ULID
+    account_id: UUID
 
 
 class CountAccounts(Query[int]):
@@ -51,7 +52,7 @@ class GetTotalBalance(Query[int]):
 class AccountSummaryProjection(Projection):
     def __init__(self):
         super().__init__()
-        self.accounts: dict[ULID, dict] = {}
+        self.accounts: dict[UUID, dict] = {}
 
     @handles_event
     async def on_account_opened(self, event: AccountOpened) -> None:
@@ -95,7 +96,7 @@ class TestProjectionScenarioEventHandling:
     @pytest.mark.asyncio
     async def test_given_processes_events(self):
         projection = AccountSummaryProjection()
-        account_id = ULID()
+        account_id = uuid4()
 
         async with ProjectionScenario(projection) as scenario:
             scenario.given(
@@ -111,8 +112,8 @@ class TestProjectionScenarioEventHandling:
     @pytest.mark.asyncio
     async def test_given_multiple_events(self):
         projection = AccountSummaryProjection()
-        id1 = ULID()
-        id2 = ULID()
+        id1 = uuid4()
+        id2 = uuid4()
 
         async with ProjectionScenario(projection) as scenario:
             scenario.given(
@@ -138,7 +139,7 @@ class TestProjectionScenarioQueryHandling:
     @pytest.mark.asyncio
     async def test_when_executes_query(self):
         projection = AccountSummaryProjection()
-        account_id = ULID()
+        account_id = uuid4()
 
         async with ProjectionScenario(projection) as scenario:
             scenario.given(
@@ -161,13 +162,13 @@ class TestProjectionScenarioQueryHandling:
         async with ProjectionScenario(projection) as scenario:
             scenario.given(
                 AccountOpened(
-                    account_id=ULID(),
+                    account_id=uuid4(),
                     owner_name="A",
                     email="a@test.com",
                     initial_balance=100,
                 ),
                 AccountOpened(
-                    account_id=ULID(),
+                    account_id=uuid4(),
                     owner_name="B",
                     email="b@test.com",
                     initial_balance=200,
@@ -180,7 +181,7 @@ class TestProjectionScenarioQueryHandling:
     @pytest.mark.asyncio
     async def test_when_multiple_queries(self):
         projection = AccountSummaryProjection()
-        id1, id2 = ULID(), ULID()
+        id1, id2 = uuid4(), uuid4()
 
         async with ProjectionScenario(projection) as scenario:
             scenario.given(
@@ -215,7 +216,7 @@ class TestProjectionScenarioStateAssertions:
         async with ProjectionScenario(projection) as scenario:
             scenario.given(
                 AccountOpened(
-                    account_id=ULID(),
+                    account_id=uuid4(),
                     owner_name="Test",
                     email="test@test.com",
                     initial_balance=999,
@@ -234,7 +235,7 @@ class TestProjectionScenarioStateAssertions:
             async with ProjectionScenario(projection) as scenario:
                 scenario.given(
                     AccountOpened(
-                        account_id=ULID(),
+                        account_id=uuid4(),
                         owner_name="Test",
                         email="test@test.com",
                     )
@@ -248,7 +249,7 @@ class TestProjectionScenarioCombined:
     @pytest.mark.asyncio
     async def test_full_scenario(self):
         projection = AccountSummaryProjection()
-        account_id = ULID()
+        account_id = uuid4()
 
         async with ProjectionScenario(projection) as scenario:
             # Given: Account is opened with initial balance

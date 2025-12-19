@@ -2,9 +2,9 @@
 
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
+from uuid import uuid4
 
 import pytest
-from ulid import ULID
 
 from interlock.application.events import InMemoryEventTransport
 from interlock.application.events.processing.conditions import (
@@ -60,8 +60,8 @@ def now():
 def event(data, timestamp=None, correlation_id=None):
     """Create a test event with sensible defaults."""
     return Event(
-        id=ULID(),
-        aggregate_id=ULID(),
+        id=uuid4(),
+        aggregate_id=uuid4(),
         data=data,
         sequence_number=1,
         timestamp=timestamp or datetime.now(timezone.utc),
@@ -207,14 +207,14 @@ async def test_process_batch_restores_context(transport):
             context_captured.append((ctx.correlation_id, ctx.causation_id))
 
     executor = EventProcessorExecutor(ContextCaptor(), Never(), NoCatchup(), batch_size=2)
-    correlation_id = ULID()
-    event1_id, event2_id = ULID(), ULID()
+    correlation_id = uuid4()
+    event1_id, event2_id = uuid4(), uuid4()
 
     await transport.publish_events(
         [
             Event(
                 id=event1_id,
-                aggregate_id=ULID(),
+                aggregate_id=uuid4(),
                 data=AccountOpened(owner="Alice"),
                 sequence_number=1,
                 timestamp=datetime.now(timezone.utc),
@@ -222,7 +222,7 @@ async def test_process_batch_restores_context(transport):
             ),
             Event(
                 id=event2_id,
-                aggregate_id=ULID(),
+                aggregate_id=uuid4(),
                 data=AccountOpened(owner="Bob"),
                 sequence_number=2,
                 timestamp=datetime.now(timezone.utc),
@@ -244,7 +244,7 @@ async def test_process_batch_restores_context(transport):
 async def test_process_batch_clears_context(executor, transport):
     """Test executor clears context after processing."""
     clear_context()
-    correlation_id = ULID()
+    correlation_id = uuid4()
 
     sub = await publish_and_subscribe(
         transport,
@@ -452,7 +452,7 @@ async def test_executor_clears_context_on_exception(transport):
             raise ValueError("Handler error")
 
     executor = EventProcessorExecutor(FailingProcessor(), Never(), NoCatchup(), batch_size=1)
-    correlation_id = ULID()
+    correlation_id = uuid4()
     sub = await publish_and_subscribe(
         transport,
         [

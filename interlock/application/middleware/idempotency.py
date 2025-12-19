@@ -29,8 +29,8 @@ class HasIdempotencyKey(Protocol):
         Property-based idempotency key (computed):
 
         >>> class TransferMoney(Command[None]):
-        ...     from_account_id: ULID
-        ...     to_account_id: ULID
+        ...     from_account_id: UUID
+        ...     to_account_id: UUID
         ...     amount: int
         ...
         ...     @property
@@ -102,8 +102,8 @@ class IdempotencyMiddleware(Middleware):
         Property-based key:
 
         >>> class TransferMoney(Command[None]):
-        ...     from_account: ULID
-        ...     to_account: ULID
+        ...     from_account: UUID
+        ...     to_account: UUID
         ...     amount: int
         ...
         ...     @property

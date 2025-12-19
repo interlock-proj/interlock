@@ -1,10 +1,10 @@
 """Tests for core testing components."""
 
 from decimal import Decimal
+from uuid import uuid4
 
 import pytest
 from pydantic import BaseModel
-from ulid import ULID
 
 from interlock.domain import Event
 from interlock.testing.core import (
@@ -20,7 +20,7 @@ from interlock.testing.core import (
 def create_event(payload: BaseModel) -> Event:
     """Helper to create Event objects for testing."""
     return Event(
-        aggregate_id=ULID(),
+        aggregate_id=uuid4(),
         data=payload,
         sequence_number=1,
     )

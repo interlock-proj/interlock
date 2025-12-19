@@ -326,7 +326,7 @@ Example:
     ...         return self.users[query.user_id]
     ...
     ...     @handles_query
-    ...     async def find_by_email(self, query: GetUserByEmail) -> ULID | None:
+    ...     async def find_by_email(self, query: GetUserByEmail) -> UUID | None:
     ...         return self.email_index.get(query.email)
 """
 

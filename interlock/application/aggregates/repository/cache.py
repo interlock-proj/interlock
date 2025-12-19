@@ -1,7 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Optional
-
-from ulid import ULID
+from uuid import UUID
 
 if TYPE_CHECKING:
     from ....domain import Aggregate
@@ -20,13 +19,13 @@ class AggregateCacheBackend(ABC):
         return NullAggregateCacheBackend()
 
     @abstractmethod
-    async def get_aggregate(self, aggregate_id: ULID) -> Optional["Aggregate"]: ...
+    async def get_aggregate(self, aggregate_id: UUID) -> Optional["Aggregate"]: ...
 
     @abstractmethod
     async def set_aggregate(self, aggregate: "Aggregate") -> None: ...
 
     @abstractmethod
-    async def remove_aggregate(self, aggregate_id: ULID) -> None: ...
+    async def remove_aggregate(self, aggregate_id: UUID) -> None: ...
 
 
 class CacheStrategy(ABC):
@@ -39,13 +38,13 @@ class CacheStrategy(ABC):
 
 
 class NullAggregateCacheBackend(AggregateCacheBackend):
-    async def get_aggregate(self, aggregate_id: ULID) -> Optional["Aggregate"]:
+    async def get_aggregate(self, aggregate_id: UUID) -> Optional["Aggregate"]:
         return None
 
     async def set_aggregate(self, aggregate: "Aggregate") -> None:
         pass
 
-    async def remove_aggregate(self, aggregate_id: ULID) -> None:
+    async def remove_aggregate(self, aggregate_id: UUID) -> None:
         pass
 
 

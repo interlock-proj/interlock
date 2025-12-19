@@ -1,7 +1,7 @@
 import logging
+from uuid import UUID
 
 import pytest
-from ulid import ULID
 
 from interlock.application.middleware import LoggingMiddleware
 from tests.conftest import ExecutionTracker
@@ -14,7 +14,7 @@ from tests.fixtures.test_app.aggregates.bank_account import (
 
 @pytest.mark.asyncio
 async def test_delegate_to_aggregate_executes_command(
-    aggregate_id: ULID, command_handler, event_store
+    aggregate_id: UUID, command_handler, event_store
 ):
     command = DepositMoney(aggregate_id=aggregate_id, amount=5)
 
@@ -28,7 +28,7 @@ async def test_delegate_to_aggregate_executes_command(
 
 @pytest.mark.asyncio
 async def test_delegate_to_aggregate_handles_multiple_commands(
-    aggregate_id: ULID, command_handler, event_store
+    aggregate_id: UUID, command_handler, event_store
 ):
     await command_handler.handle(DepositMoney(aggregate_id=aggregate_id, amount=3))
     await command_handler.handle(DepositMoney(aggregate_id=aggregate_id, amount=7))
@@ -42,7 +42,7 @@ async def test_delegate_to_aggregate_handles_multiple_commands(
 
 @pytest.mark.asyncio
 async def test_middleware_wraps_handler_execution(
-    aggregate_id: ULID,
+    aggregate_id: UUID,
     command_handler,
     execution_tracker: ExecutionTracker,
 ):
@@ -57,7 +57,7 @@ async def test_middleware_wraps_handler_execution(
 
 
 @pytest.mark.asyncio
-async def test_multiple_middlewares_execute_in_order(aggregate_id: ULID, command_handler):
+async def test_multiple_middlewares_execute_in_order(aggregate_id: UUID, command_handler):
     tracker1 = ExecutionTracker()
     tracker2 = ExecutionTracker()
 
@@ -83,7 +83,7 @@ def test_logging_middleware_accepts_log_levels():
 
 
 @pytest.mark.asyncio
-async def test_logging_middleware_logs_commands(aggregate_id: ULID, caplog, command_handler):
+async def test_logging_middleware_logs_commands(aggregate_id: UUID, caplog, command_handler):
     middleware = LoggingMiddleware("INFO")
     command = DepositMoney(aggregate_id=aggregate_id, amount=5)
 
@@ -95,7 +95,7 @@ async def test_logging_middleware_logs_commands(aggregate_id: ULID, caplog, comm
 
 @pytest.mark.asyncio
 async def test_command_bus_routes_command_to_aggregate(
-    aggregate_id: ULID, bank_account_app, event_store
+    aggregate_id: UUID, bank_account_app, event_store
 ):
     await bank_account_app.dispatch(DepositMoney(aggregate_id=aggregate_id, amount=10))
 
@@ -107,7 +107,7 @@ async def test_command_bus_routes_command_to_aggregate(
 
 @pytest.mark.asyncio
 async def test_command_bus_routes_different_commands(
-    aggregate_id: ULID, bank_account_app, event_store
+    aggregate_id: UUID, bank_account_app, event_store
 ):
     from decimal import Decimal
 
@@ -122,7 +122,7 @@ async def test_command_bus_routes_different_commands(
 
 
 @pytest.mark.asyncio
-async def test_command_bus_raises_on_unregistered_command(aggregate_id: ULID, base_app_builder):
+async def test_command_bus_raises_on_unregistered_command(aggregate_id: UUID, base_app_builder):
     # Build an app without registering BankAccount aggregate
     # This should fail when trying to dispatch DepositMoney
     from interlock.application.container import DependencyNotFoundError
@@ -134,7 +134,7 @@ async def test_command_bus_raises_on_unregistered_command(aggregate_id: ULID, ba
 
 
 @pytest.mark.asyncio
-async def test_create_builds_working_bus(aggregate_id: ULID, bank_account_app, event_store):
+async def test_create_builds_working_bus(aggregate_id: UUID, bank_account_app, event_store):
     await bank_account_app.dispatch(DepositMoney(aggregate_id=aggregate_id, amount=15))
 
     # Verify by checking events were saved
@@ -145,7 +145,7 @@ async def test_create_builds_working_bus(aggregate_id: ULID, bank_account_app, e
 
 @pytest.mark.asyncio
 async def test_create_applies_middleware_to_matching_commands(
-    aggregate_id: ULID,
+    aggregate_id: UUID,
     base_app_builder,
     event_store,
 ):
@@ -166,7 +166,7 @@ async def test_create_applies_middleware_to_matching_commands(
 
 @pytest.mark.asyncio
 async def test_create_applies_middleware_to_all_subclasses(
-    aggregate_id: ULID,
+    aggregate_id: UUID,
     base_app_builder,
     event_store,
 ):
@@ -191,7 +191,7 @@ async def test_create_applies_middleware_to_all_subclasses(
 
 @pytest.mark.asyncio
 async def test_create_does_not_apply_non_matching_middleware(
-    aggregate_id: ULID, base_app_builder, event_store
+    aggregate_id: UUID, base_app_builder, event_store
 ):
     from interlock.routing import intercepts
 

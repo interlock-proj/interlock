@@ -470,7 +470,7 @@ Test upcasters like any other unit:
 
 ```python
 import pytest
-from ulid import ULID
+from uuid import UUID, uuid4
 from interlock.domain import Event
 
 @pytest.mark.asyncio
@@ -488,7 +488,7 @@ async def test_upcaster_preserves_event_metadata():
     upcaster = MoneyDepositedV1ToV2()
     
     original = Event(
-        aggregate_id=ULID(),
+        aggregate_id=uuid4(),
         data=MoneyDepositedV1(amount=100),
         sequence_number=5,
     )

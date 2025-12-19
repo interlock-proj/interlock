@@ -37,9 +37,9 @@ their response type:
 
 ```python
 from interlock.domain import Command
-from ulid import ULID
+from uuid import UUID, uuid4
 
-class CreateAccount(Command[ULID]):
+class CreateAccount(Command[UUID]):
     """Create a new bank account, returning its ID."""
     owner: str
 
@@ -53,11 +53,11 @@ class WithdrawMoney(Command[None]):
 
 class TransferMoney(Command[None]):
     """Transfer money between accounts."""
-    to_account_id: ULID
+    to_account_id: UUID
     amount: int
 ```
 
-The type parameter (`[ULID]`, `[None]`) indicates what the command handler returns. 
+The type parameter (`[UUID]`, `[None]`) indicates what the command handler returns. 
 Use `Command[None]` for commands that don't return a value.
 
 ### Required Fields
@@ -66,17 +66,17 @@ Every command automatically includes these fields:
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `aggregate_id` | `ULID` | Target aggregate for this command |
-| `command_id` | `ULID` | Unique identifier (auto-generated) |
-| `correlation_id` | `ULID \| None` | Links related operations |
-| `causation_id` | `ULID \| None` | What triggered this command |
+| `aggregate_id` | `UUID` | Target aggregate for this command |
+| `command_id` | `UUID` | Unique identifier (auto-generated) |
+| `correlation_id` | `UUID \| None` | Links related operations |
+| `causation_id` | `UUID \| None` | What triggered this command |
 
 The `aggregate_id` is **required** when creating a command—it identifies which aggregate should handle it:
 
 ```python
 # aggregate_id is required
 command = DepositMoney(
-    aggregate_id=ULID(),  # Which account to deposit to
+    aggregate_id=uuid4(),  # Which account to deposit to
     amount=100
 )
 
@@ -135,7 +135,7 @@ app = (
 async with app:
     # Dispatch a command (returns the command's declared response type)
     account_id = await app.dispatch(CreateAccount(
-        aggregate_id=ULID(),  # Pre-generated ID
+        aggregate_id=uuid4(),  # Pre-generated ID
         owner="Alice"
     ))
     
@@ -182,7 +182,7 @@ class DepositMoney(Command):
     amount: int = Field(gt=0)  # Must be positive
 
 # This raises ValidationError before dispatch
-DepositMoney(aggregate_id=ULID(), amount=-100)
+DepositMoney(aggregate_id=uuid4(), amount=-100)
 ```
 
 ### 2. Middleware Validation
@@ -259,7 +259,7 @@ Commands support distributed tracing through correlation and causation IDs:
 initial_command = CreateOrder(
     aggregate_id=order_id,
     items=[...],
-    correlation_id=ULID()  # Start of the trace
+    correlation_id=uuid4()  # Start of the trace
 )
 
 # Later, a saga dispatches a related command
@@ -313,8 +313,8 @@ command = DepositMoney(
 # Option 2: Property-based key (computed from command data)
 class TransferMoney(Command):
     """A transfer that derives its idempotency key from its parameters."""
-    from_account: ULID
-    to_account: ULID
+    from_account: UUID
+    to_account: UUID
     amount: int
 
     @property
@@ -459,7 +459,7 @@ class ApproveOrder(Command):
 
 # Complete context
 class ApproveOrder(Command):
-    approved_by: ULID
+    approved_by: UUID
     approval_notes: str | None = None
 ```
 

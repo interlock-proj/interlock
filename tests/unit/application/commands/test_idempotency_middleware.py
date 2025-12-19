@@ -1,9 +1,9 @@
 """Comprehensive tests for IdempotencyMiddleware and storage backends."""
 
 from unittest.mock import AsyncMock
+from uuid import UUID, uuid4
 
 import pytest
-from ulid import ULID
 
 from interlock.application.middleware import (
     HasIdempotencyKey,
@@ -24,8 +24,8 @@ class SampleTrackedCommand(Command):
 class ComputedIdempotencyCommand(Command):
     """Sample command with computed idempotency key via property."""
 
-    from_account: ULID
-    to_account: ULID
+    from_account: UUID
+    to_account: UUID
     amount: int
 
     @property
@@ -42,7 +42,7 @@ class RegularCommand(Command):
 @pytest.fixture
 def command():
     """Fixture for a tracked command."""
-    return SampleTrackedCommand(aggregate_id=ULID(), idempotency_key="test-key-123")
+    return SampleTrackedCommand(aggregate_id=uuid4(), idempotency_key="test-key-123")
 
 
 # Factory Method Tests
@@ -214,9 +214,9 @@ async def test_middleware_handles_duplicate_commands():
     middleware = IdempotencyMiddleware(backend)
     next_handler = AsyncMock()
 
-    command1 = SampleTrackedCommand(aggregate_id=ULID(), idempotency_key="duplicate-key")
+    command1 = SampleTrackedCommand(aggregate_id=uuid4(), idempotency_key="duplicate-key")
     command2 = SampleTrackedCommand(
-        aggregate_id=ULID(), idempotency_key="duplicate-key"
+        aggregate_id=uuid4(), idempotency_key="duplicate-key"
     )  # Same key
 
     # Process first command
@@ -267,7 +267,7 @@ async def test_middleware_with_empty_idempotency_key():
     middleware = IdempotencyMiddleware(backend)
     next_handler = AsyncMock()
 
-    command = SampleTrackedCommand(aggregate_id=ULID(), idempotency_key="")
+    command = SampleTrackedCommand(aggregate_id=uuid4(), idempotency_key="")
 
     # Should still work (empty string is valid)
     await middleware.ensure_idempotency(command, next_handler)
@@ -285,8 +285,8 @@ async def test_middleware_different_aggregates_same_key():
     middleware = IdempotencyMiddleware(backend)
     next_handler = AsyncMock()
 
-    agg_id_1 = ULID()
-    agg_id_2 = ULID()
+    agg_id_1 = uuid4()
+    agg_id_2 = uuid4()
 
     command1 = SampleTrackedCommand(aggregate_id=agg_id_1, idempotency_key="shared-key")
     command2 = SampleTrackedCommand(aggregate_id=agg_id_2, idempotency_key="shared-key")
@@ -312,8 +312,8 @@ async def test_middleware_with_computed_idempotency_key():
     middleware = IdempotencyMiddleware(backend)
     next_handler = AsyncMock()
 
-    from_acc = ULID()
-    to_acc = ULID()
+    from_acc = uuid4()
+    to_acc = uuid4()
 
     command = ComputedIdempotencyCommand(
         aggregate_id=from_acc,
@@ -346,8 +346,8 @@ async def test_middleware_different_computed_keys():
     middleware = IdempotencyMiddleware(backend)
     next_handler = AsyncMock()
 
-    from_acc = ULID()
-    to_acc = ULID()
+    from_acc = uuid4()
+    to_acc = uuid4()
 
     command1 = ComputedIdempotencyCommand(
         aggregate_id=from_acc,
@@ -380,7 +380,7 @@ async def test_middleware_passes_through_regular_commands():
     middleware = IdempotencyMiddleware(backend)
     next_handler = AsyncMock()
 
-    command = RegularCommand(aggregate_id=ULID(), data="test")
+    command = RegularCommand(aggregate_id=uuid4(), data="test")
 
     # Should pass through without checking idempotency
     await middleware.ensure_idempotency(command, next_handler)
@@ -394,14 +394,14 @@ async def test_middleware_passes_through_regular_commands():
 @pytest.mark.asyncio
 async def test_protocol_detection():
     """Test that HasIdempotencyKey protocol detection works."""
-    tracked = SampleTrackedCommand(aggregate_id=ULID(), idempotency_key="key")
+    tracked = SampleTrackedCommand(aggregate_id=uuid4(), idempotency_key="key")
     computed = ComputedIdempotencyCommand(
-        aggregate_id=ULID(),
-        from_account=ULID(),
-        to_account=ULID(),
+        aggregate_id=uuid4(),
+        from_account=uuid4(),
+        to_account=uuid4(),
         amount=100,
     )
-    regular = RegularCommand(aggregate_id=ULID(), data="test")
+    regular = RegularCommand(aggregate_id=uuid4(), data="test")
 
     assert isinstance(tracked, HasIdempotencyKey)
     assert isinstance(computed, HasIdempotencyKey)

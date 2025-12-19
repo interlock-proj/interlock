@@ -20,18 +20,18 @@ First, we'll define a repository interface and an in-memory implementation:
 
 ```python
 from abc import ABC, abstractmethod
-from ulid import ULID
+from uuid import UUID, uuid4
 
 class AccountBalanceRepository(ABC):
     """Repository for account balance projections."""
     
     @abstractmethod
-    def get_balance(self, account_id: ULID) -> int:
+    def get_balance(self, account_id: UUID) -> int:
         """Get the current balance for an account."""
         ...
     
     @abstractmethod
-    def set_balance(self, account_id: ULID, balance: int) -> None:
+    def set_balance(self, account_id: UUID, balance: int) -> None:
         """Set the balance for an account."""
         ...
 
@@ -39,12 +39,12 @@ class InMemoryAccountBalanceRepository(AccountBalanceRepository):
     """In-memory implementation for testing and development."""
     
     def __init__(self):
-        self._balances: dict[ULID, int] = {}
+        self._balances: dict[UUID, int] = {}
     
-    def get_balance(self, account_id: ULID) -> int:
+    def get_balance(self, account_id: UUID) -> int:
         return self._balances.get(account_id, 0)
     
-    def set_balance(self, account_id: ULID, balance: int) -> None:
+    def set_balance(self, account_id: UUID, balance: int) -> None:
         self._balances[account_id] = balance
 ```
 

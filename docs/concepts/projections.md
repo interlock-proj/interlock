@@ -51,19 +51,19 @@ from interlock.application import Projection
 from interlock.domain import Query
 from interlock.routing import handles_event, handles_query
 from pydantic import BaseModel
-from ulid import ULID
+from uuid import UUID, uuid4
 
 # Response type
 class UserProfile(BaseModel):
-    id: ULID
+    id: UUID
     name: str
     email: str
 
 # Query types (see Queries documentation for details)
 class GetUserById(Query[UserProfile]):
-    user_id: ULID
+    user_id: UUID
 
-class GetUserByEmail(Query[ULID | None]):
+class GetUserByEmail(Query[UUID | None]):
     email: str
 
 class CountUsers(Query[int]):
@@ -73,8 +73,8 @@ class CountUsers(Query[int]):
 class UserDirectoryProjection(Projection):
     def __init__(self):
         super().__init__()
-        self.users: dict[ULID, UserProfile] = {}
-        self.email_index: dict[str, ULID] = {}
+        self.users: dict[UUID, UserProfile] = {}
+        self.email_index: dict[str, UUID] = {}
     
     # Event handlers update state
     @handles_event
@@ -101,7 +101,7 @@ class UserDirectoryProjection(Projection):
         return self.users[query.user_id]
     
     @handles_query
-    async def get_by_email(self, query: GetUserByEmail) -> ULID | None:
+    async def get_by_email(self, query: GetUserByEmail) -> UUID | None:
         return self.email_index.get(query.email)
     
     @handles_query
@@ -200,7 +200,7 @@ Create an abstract base class that defines the operations your projection needs:
 
 ```python
 from abc import ABC, abstractmethod
-from ulid import ULID
+from uuid import UUID, uuid4
 
 class UserDirectoryRepository(ABC):
     """Abstract interface for user directory storage."""
@@ -211,17 +211,17 @@ class UserDirectoryRepository(ABC):
         ...
     
     @abstractmethod
-    async def get_user(self, user_id: ULID) -> UserProfile | None:
+    async def get_user(self, user_id: UUID) -> UserProfile | None:
         """Get a user by ID, or None if not found."""
         ...
     
     @abstractmethod
-    async def get_user_by_email(self, email: str) -> ULID | None:
+    async def get_user_by_email(self, email: str) -> UUID | None:
         """Look up user ID by email, or None if not found."""
         ...
     
     @abstractmethod
-    async def update_email(self, user_id: ULID, new_email: str) -> None:
+    async def update_email(self, user_id: UUID, new_email: str) -> None:
         """Update a user's email address."""
         ...
     
@@ -239,20 +239,20 @@ Provide implementations for different environments:
 # In-memory implementation for testing
 class InMemoryUserDirectoryRepository(UserDirectoryRepository):
     def __init__(self):
-        self.users: dict[ULID, UserProfile] = {}
-        self.email_index: dict[str, ULID] = {}
+        self.users: dict[UUID, UserProfile] = {}
+        self.email_index: dict[str, UUID] = {}
     
     async def save_user(self, user: UserProfile) -> None:
         self.users[user.id] = user
         self.email_index[user.email] = user.id
     
-    async def get_user(self, user_id: ULID) -> UserProfile | None:
+    async def get_user(self, user_id: UUID) -> UserProfile | None:
         return self.users.get(user_id)
     
-    async def get_user_by_email(self, email: str) -> ULID | None:
+    async def get_user_by_email(self, email: str) -> UUID | None:
         return self.email_index.get(email)
     
-    async def update_email(self, user_id: ULID, new_email: str) -> None:
+    async def update_email(self, user_id: UUID, new_email: str) -> None:
         user = self.users.get(user_id)
         if user:
             del self.email_index[user.email]
@@ -279,7 +279,7 @@ class PostgresUserDirectoryRepository(UserDirectoryRepository):
                 str(user.id), user.name, user.email
             )
     
-    async def get_user(self, user_id: ULID) -> UserProfile | None:
+    async def get_user(self, user_id: UUID) -> UserProfile | None:
         async with self.pool.acquire() as conn:
             row = await conn.fetchrow(
                 "SELECT id, name, email FROM user_directory WHERE id = $1",
@@ -287,7 +287,7 @@ class PostgresUserDirectoryRepository(UserDirectoryRepository):
             )
             if row:
                 return UserProfile(
-                    id=ULID.from_str(row["id"]),
+                    id=UUID(row["id"]),
                     name=row["name"],
                     email=row["email"]
                 )
@@ -326,7 +326,7 @@ class UserDirectoryProjection(Projection):
         return user
     
     @handles_query
-    async def get_by_email(self, query: GetUserByEmail) -> ULID | None:
+    async def get_by_email(self, query: GetUserByEmail) -> UUID | None:
         return await self.repository.get_user_by_email(query.email)
     
     @handles_query
@@ -388,28 +388,28 @@ from abc import ABC, abstractmethod
 # Repository interface for account lookups
 class AccountLookupRepository(ABC):
     @abstractmethod
-    async def save_mapping(self, email: str, account_id: ULID) -> None:
+    async def save_mapping(self, email: str, account_id: UUID) -> None:
         ...
     
     @abstractmethod
-    async def get_account_id(self, email: str) -> ULID | None:
+    async def get_account_id(self, email: str) -> UUID | None:
         ...
 
 
 # In-memory implementation
 class InMemoryAccountLookupRepository(AccountLookupRepository):
     def __init__(self):
-        self.email_to_id: dict[str, ULID] = {}
+        self.email_to_id: dict[str, UUID] = {}
     
-    async def save_mapping(self, email: str, account_id: ULID) -> None:
+    async def save_mapping(self, email: str, account_id: UUID) -> None:
         self.email_to_id[email] = account_id
     
-    async def get_account_id(self, email: str) -> ULID | None:
+    async def get_account_id(self, email: str) -> UUID | None:
         return self.email_to_id.get(email)
 
 
 # Query definition
-class GetAccountIdByEmail(Query[ULID | None]):
+class GetAccountIdByEmail(Query[UUID | None]):
     email: str
 
 
@@ -424,7 +424,7 @@ class AccountLookupProjection(Projection):
         await self.repository.save_mapping(event.email, event.account_id)
     
     @handles_query
-    async def lookup(self, query: GetAccountIdByEmail) -> ULID | None:
+    async def lookup(self, query: GetAccountIdByEmail) -> UUID | None:
         return await self.repository.get_account_id(query.email)
 ```
 
@@ -467,7 +467,7 @@ def projection():
 
 @pytest.mark.asyncio
 async def test_user_lookup(projection):
-    user_id = ULID()
+    user_id = uuid4()
     
     async with ProjectionScenario(projection) as scenario:
         # Given: User was created
@@ -487,8 +487,8 @@ async def test_user_lookup(projection):
 async def test_user_count(projection):
     async with ProjectionScenario(projection) as scenario:
         scenario.given(
-            UserCreated(user_id=ULID(), name="Alice", email="a@test.com"),
-            UserCreated(user_id=ULID(), name="Bob", email="b@test.com"),
+            UserCreated(user_id=uuid4(), name="Alice", email="a@test.com"),
+            UserCreated(user_id=uuid4(), name="Bob", email="b@test.com"),
         )
         
         count = await scenario.when(CountUsers())
@@ -518,7 +518,7 @@ def test_app():
 @pytest.mark.asyncio
 async def test_with_di(test_app):
     async with test_app.projection_scenario(UserDirectoryProjection) as scenario:
-        scenario.given(UserCreated(user_id=ULID(), name="Alice", email="a@test.com"))
+        scenario.given(UserCreated(user_id=uuid4(), name="Alice", email="a@test.com"))
         result = await scenario.when(GetUserByEmail(email="a@test.com"))
         assert result is not None
 ```

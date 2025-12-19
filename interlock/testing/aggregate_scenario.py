@@ -1,8 +1,8 @@
 from collections.abc import Callable
 from typing import Any, Generic, TypeVar, cast
+from uuid import UUID, uuid4
 
 from pydantic import BaseModel
-from ulid import ULID
 
 from interlock.domain import Aggregate, Command
 
@@ -29,9 +29,9 @@ class AggregateScenario(Scenario[A], Generic[A]):
     If the expectations are not met, an AssertionError will be raised.
     """
 
-    def __init__(self, aggregate: type[A], aggregate_id: ULID | None = None):
+    def __init__(self, aggregate: type[A], aggregate_id: UUID | None = None):
         super().__init__()
-        self.aggregate_id = aggregate_id or ULID()
+        self.aggregate_id = aggregate_id or uuid4()
         self.aggregate = aggregate(id=self.aggregate_id)
         self.commands: list[Command] = []
 

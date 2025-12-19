@@ -18,12 +18,12 @@ First, define query types. Queries are like commands but for reading data:
 
 ```python
 from interlock.domain import Query
-from ulid import ULID
+from uuid import UUID, uuid4
 
 class GetAccountBalance(Query[int]):  # (1)!
-    account_id: ULID
+    account_id: UUID
 
-class GetAccountByEmail(Query[ULID | None]):  # (2)!
+class GetAccountByEmail(Query[UUID | None]):  # (2)!
     email: str
 
 class CountAccounts(Query[int]):
@@ -31,7 +31,7 @@ class CountAccounts(Query[int]):
 ```
 
 1. Returns an `int` (the balance)
-2. Returns `ULID | None` (the account ID if found)
+2. Returns `UUID | None` (the account ID if found)
 
 The type parameter (`Query[int]`) specifies what the query returns, giving you 
 type safety and IDE autocomplete.
@@ -50,7 +50,7 @@ def projection():
     return AccountBalanceProjection(repository)
 
 async def test_query_returns_balance(projection):
-    account_id = ULID()
+    account_id = uuid4()
     
     async with ProjectionScenario(projection) as scenario:
         # Given: money was deposited
@@ -69,7 +69,7 @@ async def test_query_returns_balance(projection):
 async def test_query_returns_zero_for_unknown_account(projection):
     async with ProjectionScenario(projection) as scenario:
         balance = await scenario.when(
-            GetAccountBalance(account_id=ULID())
+            GetAccountBalance(account_id=uuid4())
         )
         assert balance == 0
 ```
@@ -140,7 +140,7 @@ Send queries through the application's `query()` method:
 ```python
 async def main():
     async with app:
-        account_id = ULID()
+        account_id = uuid4()
         
         # Create account and deposit money
         await app.dispatch(OpenAccount(
@@ -165,7 +165,7 @@ This lets external systems reference entities by human-readable identifiers.
 ### Define the Query
 
 ```python
-class GetAccountIdByEmail(Query[ULID | None]):
+class GetAccountIdByEmail(Query[UUID | None]):
     """Find account aggregate ID by email address."""
     email: str
 ```
@@ -177,21 +177,21 @@ from abc import ABC, abstractmethod
 
 class AccountLookupRepository(ABC):
     @abstractmethod
-    async def save_mapping(self, email: str, account_id: ULID) -> None:
+    async def save_mapping(self, email: str, account_id: UUID) -> None:
         ...
     
     @abstractmethod
-    async def get_account_id(self, email: str) -> ULID | None:
+    async def get_account_id(self, email: str) -> UUID | None:
         ...
 
 class InMemoryAccountLookupRepository(AccountLookupRepository):
     def __init__(self):
-        self.email_to_id: dict[str, ULID] = {}
+        self.email_to_id: dict[str, UUID] = {}
     
-    async def save_mapping(self, email: str, account_id: ULID) -> None:
+    async def save_mapping(self, email: str, account_id: UUID) -> None:
         self.email_to_id[email] = account_id
     
-    async def get_account_id(self, email: str) -> ULID | None:
+    async def get_account_id(self, email: str) -> UUID | None:
         return self.email_to_id.get(email)
 ```
 
@@ -208,7 +208,7 @@ class AccountLookupProjection(Projection):
         await self.repository.save_mapping(event.email, event.account_id)
     
     @handles_query
-    async def lookup(self, query: GetAccountIdByEmail) -> ULID | None:
+    async def lookup(self, query: GetAccountIdByEmail) -> UUID | None:
         return await self.repository.get_account_id(query.email)
 ```
 

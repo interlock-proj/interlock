@@ -418,7 +418,7 @@ def app():
     )
 
 async def test_tracks_balance_after_deposit(app):
-    account_id = ULID()
+    account_id = uuid4()
     
     async with app.processor_scenario(AccountBalanceProjection) as scenario:
         await scenario \

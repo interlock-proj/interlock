@@ -2,9 +2,9 @@
 
 from datetime import timedelta
 from decimal import Decimal
+from uuid import uuid4
 
 import pytest
-from ulid import ULID
 
 from interlock.application.aggregates.repository.snapshot import (
     AggregateSnapshotStorageBackend,
@@ -94,10 +94,10 @@ async def test_null_backend_save_does_nothing():
 async def test_null_backend_load_returns_none():
     """Verify NullAggregateSnapshotStorageBackend.load_snapshot returns None."""
     backend = NullAggregateSnapshotStorageBackend()
-    result = await backend.load_snapshot(ULID())
+    result = await backend.load_snapshot(uuid4())
     assert result is None
 
-    result_with_version = await backend.load_snapshot(ULID(), intended_version=10)
+    result_with_version = await backend.load_snapshot(uuid4(), intended_version=10)
     assert result_with_version is None
 
 
@@ -114,7 +114,7 @@ async def test_aggregate_snapshot_backend_factory_methods():
     """Verify snapshot backend factory methods work correctly."""
     backend = AggregateSnapshotStorageBackend.null()
     assert isinstance(backend, NullAggregateSnapshotStorageBackend)
-    assert await backend.load_snapshot(ULID()) is None
+    assert await backend.load_snapshot(uuid4()) is None
 
 
 # InMemoryAggregateSnapshotStorageBackend Tests
@@ -125,7 +125,7 @@ async def test_in_memory_save_and_load():
     """Test in-memory backend save/load round trip."""
     backend = InMemoryAggregateSnapshotStorageBackend()
 
-    account = BankAccount(id=ULID())
+    account = BankAccount(id=uuid4())
     account.owner = "Alice"
     account.balance = Decimal("100.00")
     account.version = 5
@@ -145,7 +145,7 @@ async def test_in_memory_load_latest_snapshot():
     """Test in-memory backend returns latest snapshot."""
     backend = InMemoryAggregateSnapshotStorageBackend()
 
-    account_id = ULID()
+    account_id = uuid4()
 
     # Save multiple snapshots with increasing versions
     for version in [1, 3, 5, 7]:
@@ -166,7 +166,7 @@ async def test_in_memory_load_with_intended_version():
     """Test in-memory backend loads correct version."""
     backend = InMemoryAggregateSnapshotStorageBackend()
 
-    account_id = ULID()
+    account_id = uuid4()
 
     # Save multiple snapshots
     for version in [1, 3, 5, 7, 10]:
@@ -193,15 +193,15 @@ async def test_in_memory_list_aggregate_ids_by_type():
     backend = InMemoryAggregateSnapshotStorageBackend()
 
     # Save BankAccount snapshots
-    account1_id = ULID()
-    account2_id = ULID()
+    account1_id = uuid4()
+    account2_id = uuid4()
     account1 = BankAccount(id=account1_id)
     account2 = BankAccount(id=account2_id)
     await backend.save_snapshot(account1)
     await backend.save_snapshot(account2)
 
     # Save Order snapshot
-    order_id = ULID()
+    order_id = uuid4()
     order = Order(id=order_id)
     await backend.save_snapshot(order)
 
@@ -223,7 +223,7 @@ async def test_in_memory_no_snapshot_returns_none():
     """Test in-memory backend returns None for missing aggregate."""
     backend = InMemoryAggregateSnapshotStorageBackend()
 
-    non_existent_id = ULID()
+    non_existent_id = uuid4()
     loaded = await backend.load_snapshot(non_existent_id)
     assert loaded is None
 

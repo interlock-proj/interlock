@@ -1,8 +1,9 @@
 """Tests for gradual migration with EagerUpcastingStrategy."""
 
+from uuid import UUID, uuid4
+
 import pytest
 from pydantic import BaseModel
-from ulid import ULID
 
 from interlock.application.events.bus import EventBus
 from interlock.application.events.delivery import SynchronousDelivery
@@ -69,7 +70,7 @@ def lazy_bus(event_store, event_transport, upcaster_map):
     return EventBus(event_store, delivery, pipeline)
 
 
-def create_v1_event(aggregate_id: ULID, seq: int = 1) -> Event[MoneyDepositedV1]:
+def create_v1_event(aggregate_id: UUID, seq: int = 1) -> Event[MoneyDepositedV1]:
     """Helper to create a V1 event."""
     return Event(
         aggregate_id=aggregate_id,
@@ -184,9 +185,9 @@ async def test_event_metadata_preserved_after_rewrite(event_store, eager_bus, ag
     from datetime import datetime, timezone
 
     original_timestamp = datetime(2024, 1, 15, 12, 0, 0, tzinfo=timezone.utc)
-    correlation_id = ULID()
-    causation_id = ULID()
-    event_id = ULID()
+    correlation_id = uuid4()
+    causation_id = uuid4()
+    event_id = uuid4()
 
     v1_event = Event(
         id=event_id,

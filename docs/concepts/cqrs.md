@@ -245,14 +245,14 @@ from interlock.routing import handles_event, handles_query
 # Define repository interface (allows swapping storage backends)
 class BalanceRepository(ABC):
     @abstractmethod
-    async def get(self, account_id: ULID) -> int: ...
+    async def get(self, account_id: UUID) -> int: ...
     
     @abstractmethod
-    async def save(self, account_id: ULID, balance: int) -> None: ...
+    async def save(self, account_id: UUID, balance: int) -> None: ...
 
 # Query with typed response
 class GetAccountBalance(Query[int]):
-    account_id: ULID
+    account_id: UUID
 
 # Projection with injected repository
 class AccountBalanceProjection(Projection):

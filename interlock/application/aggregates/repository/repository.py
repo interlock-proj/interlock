@@ -1,8 +1,7 @@
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from typing import TYPE_CHECKING, Generic, TypeVar
-
-from ulid import ULID
+from uuid import UUID
 
 from ....domain.exceptions import ConcurrencyError
 from ...events import EventBus
@@ -25,7 +24,7 @@ class AggregateFactory(Generic[A]):
         """Get the aggregate type this factory produces."""
         return self._aggregate_type
 
-    def create(self, aggregate_id: ULID) -> A:
+    def create(self, aggregate_id: UUID) -> A:
         """Create a new aggregate instance with the given ID."""
         return self._aggregate_type(id=aggregate_id)
 
@@ -70,7 +69,7 @@ class AggregateRepository(Generic[A]):
         self.cache_backend = cache_backend
         self.snapshot_backend = snapshot_backend
 
-    async def list_all_ids(self) -> list[ULID]:
+    async def list_all_ids(self) -> list[UUID]:
         """Get all aggregate IDs of this repository's type.
 
         This queries the snapshot backend for all aggregates of the repository's
@@ -84,12 +83,12 @@ class AggregateRepository(Generic[A]):
         Example:
             >>> user_repository = AggregateRepository[User](...)
             >>> user_ids = await user_repository.list_all_ids()
-            >>> # [ULID('...'), ULID('...'), ...]
+            >>> # [UUID('...'), UUID('...'), ...]
         """
         return await self.snapshot_backend.list_aggregate_ids_by_type(self.aggregate_type)
 
     @asynccontextmanager
-    async def acquire(self, aggregate_id: ULID) -> AsyncIterator[A]:
+    async def acquire(self, aggregate_id: UUID) -> AsyncIterator[A]:
         aggregate = await self._load_aggregate(aggregate_id)
         original_version = aggregate.version
 
@@ -109,7 +108,7 @@ class AggregateRepository(Generic[A]):
             if self.cache_strategy.should_cache(aggregate):
                 await self.cache_backend.set_aggregate(aggregate)
 
-    async def _load_aggregate(self, aggregate_id: ULID) -> A:
+    async def _load_aggregate(self, aggregate_id: UUID) -> A:
         # (Low Cost) First, we will check the cache to see if the
         # aggregate is already loaded.
         if cached := await self.cache_backend.get_aggregate(aggregate_id):

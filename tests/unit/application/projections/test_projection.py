@@ -1,8 +1,9 @@
 """Tests for the Projection base class."""
 
+from uuid import UUID, uuid4
+
 import pytest
 from pydantic import BaseModel
-from ulid import ULID
 
 from interlock.application.projections import Projection
 from interlock.domain import Event, Query
@@ -11,38 +12,38 @@ from interlock.routing import handles_event, handles_query
 
 # Test event types (bank account domain)
 class AccountOpened(BaseModel):
-    account_id: ULID
+    account_id: UUID
     owner_name: str
     email: str
     initial_balance: int = 0
 
 
 class MoneyDeposited(BaseModel):
-    account_id: ULID
+    account_id: UUID
     amount: int
 
 
 class MoneyWithdrawn(BaseModel):
-    account_id: ULID
+    account_id: UUID
     amount: int
 
 
 class EmailChanged(BaseModel):
-    account_id: ULID
+    account_id: UUID
     new_email: str
 
 
 # Test query types
 class GetAccountById(Query[dict]):
-    account_id: ULID
+    account_id: UUID
 
 
-class GetAccountByEmail(Query[ULID | None]):
+class GetAccountByEmail(Query[UUID | None]):
     email: str
 
 
 class GetAccountBalance(Query[int]):
-    account_id: ULID
+    account_id: UUID
 
 
 class CountAccounts(Query[int]):
@@ -55,8 +56,8 @@ class AccountDirectoryProjection(Projection):
 
     def __init__(self):
         super().__init__()
-        self.accounts: dict[ULID, dict] = {}
-        self.email_index: dict[str, ULID] = {}
+        self.accounts: dict[UUID, dict] = {}
+        self.email_index: dict[str, UUID] = {}
 
     @handles_event
     async def on_account_opened(self, event: AccountOpened) -> None:
@@ -91,7 +92,7 @@ class AccountDirectoryProjection(Projection):
         return self.accounts[query.account_id]
 
     @handles_query
-    async def get_account_by_email(self, query: GetAccountByEmail) -> ULID | None:
+    async def get_account_by_email(self, query: GetAccountByEmail) -> UUID | None:
         return self.email_index.get(query.email)
 
     @handles_query
@@ -109,7 +110,7 @@ class TestProjectionEventHandling:
     @pytest.mark.asyncio
     async def test_handles_single_event(self):
         projection = AccountDirectoryProjection()
-        account_id = ULID()
+        account_id = uuid4()
 
         event = Event(
             aggregate_id=account_id,
@@ -131,7 +132,7 @@ class TestProjectionEventHandling:
     @pytest.mark.asyncio
     async def test_handles_multiple_events(self):
         projection = AccountDirectoryProjection()
-        account_id = ULID()
+        account_id = uuid4()
 
         event1 = Event(
             aggregate_id=account_id,
@@ -157,7 +158,7 @@ class TestProjectionEventHandling:
     @pytest.mark.asyncio
     async def test_builds_secondary_index(self):
         projection = AccountDirectoryProjection()
-        account_id = ULID()
+        account_id = uuid4()
 
         event = Event(
             aggregate_id=account_id,
@@ -176,7 +177,7 @@ class TestProjectionEventHandling:
     @pytest.mark.asyncio
     async def test_updates_secondary_index_on_change(self):
         projection = AccountDirectoryProjection()
-        account_id = ULID()
+        account_id = uuid4()
 
         event1 = Event(
             aggregate_id=account_id,
@@ -206,7 +207,7 @@ class TestProjectionQueryHandling:
     @pytest.mark.asyncio
     async def test_query_by_id(self):
         projection = AccountDirectoryProjection()
-        account_id = ULID()
+        account_id = uuid4()
 
         # Set up state
         event = Event(
@@ -231,7 +232,7 @@ class TestProjectionQueryHandling:
     @pytest.mark.asyncio
     async def test_query_by_email(self):
         projection = AccountDirectoryProjection()
-        account_id = ULID()
+        account_id = uuid4()
 
         # Set up state
         event = Event(
@@ -261,7 +262,7 @@ class TestProjectionQueryHandling:
     @pytest.mark.asyncio
     async def test_query_balance(self):
         projection = AccountDirectoryProjection()
-        account_id = ULID()
+        account_id = uuid4()
 
         # Set up state with deposits and withdrawals
         events = [
@@ -300,7 +301,7 @@ class TestProjectionQueryHandling:
 
         # Add multiple accounts
         for i in range(3):
-            account_id = ULID()
+            account_id = uuid4()
             event = Event(
                 aggregate_id=account_id,
                 data=AccountOpened(

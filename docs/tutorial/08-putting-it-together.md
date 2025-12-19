@@ -43,7 +43,7 @@ Using the convention-based approach from the previous section:
 ```python
 # main.py
 import asyncio
-from ulid import ULID
+from uuid import UUID, uuid4
 from interlock.application import ApplicationBuilder
 
 from bank_app.commands.account_commands import OpenAccount, DepositMoney
@@ -60,7 +60,7 @@ async def main():
 
     async with app:
         # Create an account
-        account_id = ULID()
+        account_id = uuid4()
         await app.dispatch(OpenAccount(
             aggregate_id=account_id,
             owner_name="Alice",

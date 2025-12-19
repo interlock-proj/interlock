@@ -3,9 +3,9 @@
 from abc import ABC, abstractmethod
 from decimal import Decimal
 from typing import TYPE_CHECKING
+from uuid import UUID, uuid4
 
 import pytest
-from ulid import ULID
 
 from interlock.application import ApplicationBuilder
 from interlock.application.events.processing import EventProcessor
@@ -337,22 +337,22 @@ class BalanceRepository(ABC):
     """Abstract repository for balance tracking."""
 
     @abstractmethod
-    def get_balance(self, account_id: ULID) -> Decimal: ...
+    def get_balance(self, account_id: UUID) -> Decimal: ...
 
     @abstractmethod
-    def set_balance(self, account_id: ULID, balance: Decimal) -> None: ...
+    def set_balance(self, account_id: UUID, balance: Decimal) -> None: ...
 
 
 class InMemoryBalanceRepository(BalanceRepository):
     """In-memory implementation for testing."""
 
     def __init__(self):
-        self._balances: dict[ULID, Decimal] = {}
+        self._balances: dict[UUID, Decimal] = {}
 
-    def get_balance(self, account_id: ULID) -> Decimal:
+    def get_balance(self, account_id: UUID) -> Decimal:
         return self._balances.get(account_id, Decimal("0"))
 
-    def set_balance(self, account_id: ULID, balance: Decimal) -> None:
+    def set_balance(self, account_id: UUID, balance: Decimal) -> None:
         self._balances[account_id] = balance
 
 
@@ -365,7 +365,7 @@ class BalanceProjection(EventProcessor):
     @handles_event
     async def on_money_deposited(self, event: MoneyDeposited) -> None:
         # Use a fixed account ID for simplicity
-        account_id = ULID()
+        account_id = uuid4()
         current = self.repository.get_balance(account_id)
         self.repository.set_balance(account_id, current + event.amount)
 

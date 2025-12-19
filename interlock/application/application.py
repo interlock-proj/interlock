@@ -2,8 +2,7 @@ import asyncio
 from collections.abc import Callable
 from types import TracebackType
 from typing import TYPE_CHECKING, Any, Protocol, TypeVar, runtime_checkable
-
-from ulid import ULID
+from uuid import UUID
 
 from ..domain import Aggregate, Command, Query
 
@@ -28,7 +27,6 @@ from .commands import (
     CommandToAggregateMap,
     DelegateToAggregate,
 )
-from .middleware import Middleware
 from .container import ContextualBinding, DependencyContainer
 from .events import (
     CatchupCondition,
@@ -51,6 +49,7 @@ from .events import (
     UpcastingStrategy,
 )
 from .events.processing import SagaStateStore
+from .middleware import Middleware
 from .projections import (
     DelegateToProjection,
     Projection,
@@ -210,7 +209,7 @@ class Application:
     def aggregate_scenario(
         self,
         aggregate_type: type[Aggregate],
-        aggregate_id: ULID | None = None,
+        aggregate_id: UUID | None = None,
     ) -> "AggregateScenario":
         """Create a test scenario for an aggregate.
 

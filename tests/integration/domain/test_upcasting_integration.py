@@ -1,8 +1,9 @@
 """Integration tests for event upcasting with ApplicationBuilder."""
 
+from uuid import uuid4
+
 import pytest
 from pydantic import BaseModel
-from ulid import ULID
 
 from interlock.application.application import ApplicationBuilder
 from interlock.application.events.upcasting import EventUpcaster
@@ -90,7 +91,7 @@ async def test_upcasting_with_application_builder():
     )
 
     # Dispatch command (emits V1 event)
-    user_id = ULID()
+    user_id = uuid4()
     await app.dispatch(RegisterUser(aggregate_id=user_id, username="john@example.com"))
 
     # Load events directly - they should be upcasted V1→V2→V3
@@ -146,7 +147,7 @@ async def test_upcaster_order_independence():
     )
 
     # Dispatch command
-    user_id = ULID()
+    user_id = uuid4()
     await app.dispatch(RegisterUser(aggregate_id=user_id, username="test@example.com"))
 
     # Load events - should be upcasted with injected config
@@ -170,7 +171,7 @@ async def test_upcasting_preserves_event_metadata():
         .build()
     )
 
-    user_id = ULID()
+    user_id = uuid4()
     await app.dispatch(RegisterUser(aggregate_id=user_id, username="alice@test.com"))
 
     # Load events directly from event bus
@@ -235,8 +236,8 @@ async def test_multiple_aggregates_with_different_upcasters():
     )
 
     # Create both aggregates
-    user_id = ULID()
-    account_id = ULID()
+    user_id = uuid4()
+    account_id = uuid4()
 
     await app.dispatch(RegisterUser(aggregate_id=user_id, username="bob@test.com"))
     await app.dispatch(CreateAccount(aggregate_id=account_id, owner="BOB123"))

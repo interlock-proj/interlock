@@ -5,9 +5,9 @@ Unlike commands, queries do not mutate state - they return data.
 """
 
 from typing import Generic, TypeVar
+from uuid import UUID, uuid4
 
 from pydantic import BaseModel, Field
-from ulid import ULID
 
 TResponse = TypeVar("TResponse")
 
@@ -36,9 +36,9 @@ class Query(BaseModel, Generic[TResponse]):
         Define a query with a typed response:
 
         >>> class GetUserById(Query[UserProfile]):
-        ...     user_id: ULID
+        ...     user_id: UUID
         >>>
-        >>> class GetUserByEmail(Query[ULID | None]):
+        >>> class GetUserByEmail(Query[UUID | None]):
         ...     email: str
         >>>
         >>> # Query handlers must return the declared response type
@@ -48,7 +48,7 @@ class Query(BaseModel, Generic[TResponse]):
         ...         return self.users[query.user_id]
     """
 
-    query_id: ULID = Field(default_factory=ULID)
-    correlation_id: ULID | None = None
-    causation_id: ULID | None = None
+    query_id: UUID = Field(default_factory=uuid4)
+    correlation_id: UUID | None = None
+    causation_id: UUID | None = None
 

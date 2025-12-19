@@ -1,8 +1,9 @@
 """Unit tests for event upcasting infrastructure."""
 
+from uuid import uuid4
+
 import pytest
 from pydantic import BaseModel
-from ulid import ULID
 
 from interlock.application.events.upcasting import (
     EagerUpcastingStrategy,
@@ -104,8 +105,8 @@ class TestEventUpcaster:
     @pytest.mark.asyncio
     async def test_upcast_event_preserves_metadata(self):
         """Should preserve event metadata when upcasting."""
-        event_id = ULID()
-        aggregate_id = ULID()
+        event_id = uuid4()
+        aggregate_id = uuid4()
         sequence_number = 5
         original_event = Event(
             id=event_id,
@@ -152,7 +153,7 @@ class TestEventUpcaster:
         """Default can_upcast should return True."""
         upcaster = AccountCreatedV1ToV2()
         event = Event(
-            aggregate_id=ULID(),
+            aggregate_id=uuid4(),
             data=AccountCreatedV1(owner_name="Test User"),
             sequence_number=1,
         )
@@ -165,7 +166,7 @@ class TestEventUpcaster:
 
         # Should upcast (has space)
         event_with_space = Event(
-            aggregate_id=ULID(),
+            aggregate_id=uuid4(),
             data=AccountCreatedV1(owner_name="John Doe"),
             sequence_number=1,
         )
@@ -173,7 +174,7 @@ class TestEventUpcaster:
 
         # Should not upcast (no space)
         event_without_space = Event(
-            aggregate_id=ULID(),
+            aggregate_id=uuid4(),
             data=AccountCreatedV1(owner_name="Madonna"),
             sequence_number=1,
         )
@@ -234,7 +235,7 @@ class TestUpcastingPipeline:
         pipeline = UpcastingPipeline(LazyUpcastingStrategy(), upcaster_map)
 
         event = Event(
-            aggregate_id=ULID(),
+            aggregate_id=uuid4(),
             data=AccountCreatedV1(owner_name="Jane Doe"),
             sequence_number=1,
         )
@@ -250,7 +251,7 @@ class TestUpcastingPipeline:
         pipeline = UpcastingPipeline(LazyUpcastingStrategy(), upcaster_map)
 
         event = Event(
-            aggregate_id=ULID(),
+            aggregate_id=uuid4(),
             data=AccountCreatedV1(owner_name="John Doe"),
             sequence_number=1,
         )
@@ -267,7 +268,7 @@ class TestUpcastingPipeline:
         pipeline = UpcastingPipeline(LazyUpcastingStrategy(), upcaster_map)
 
         event = Event(
-            aggregate_id=ULID(),
+            aggregate_id=uuid4(),
             data=AccountCreatedV1(owner_name="Bob Smith"),
             sequence_number=1,
         )
@@ -288,7 +289,7 @@ class TestUpcastingPipeline:
         pipeline = UpcastingPipeline(LazyUpcastingStrategy(), upcaster_map)
 
         event = Event(
-            aggregate_id=ULID(),
+            aggregate_id=uuid4(),
             data=AccountCreatedV1(owner_name="Alice Jones"),
             sequence_number=1,
         )
@@ -316,7 +317,7 @@ class TestUpcastingPipeline:
         pipeline = UpcastingPipeline(LazyUpcastingStrategy(), upcaster_map)
 
         event = Event(
-            aggregate_id=ULID(),
+            aggregate_id=uuid4(),
             data=AccountCreatedV1(owner_name="Test"),
             sequence_number=1,
         )
@@ -332,12 +333,12 @@ class TestUpcastingPipeline:
 
         events = [
             Event(
-                aggregate_id=ULID(),
+                aggregate_id=uuid4(),
                 data=AccountCreatedV1(owner_name="User One"),
                 sequence_number=1,
             ),
             Event(
-                aggregate_id=ULID(),
+                aggregate_id=uuid4(),
                 data=AccountCreatedV1(owner_name="User Two"),
                 sequence_number=2,
             ),
@@ -356,7 +357,7 @@ class TestUpcastingPipeline:
 
         events = [
             Event(
-                aggregate_id=ULID(),
+                aggregate_id=uuid4(),
                 data=AccountCreatedV1(owner_name="User One"),
                 sequence_number=1,
             )
@@ -376,7 +377,7 @@ class TestUpcastingPipeline:
 
         events = [
             Event(
-                aggregate_id=ULID(),
+                aggregate_id=uuid4(),
                 data=AccountCreatedV1(owner_name="User One"),
                 sequence_number=1,
             )
@@ -394,14 +395,14 @@ class TestUpcastingPipeline:
 
         # Event that should be upcasted (has space)
         event_yes = Event(
-            aggregate_id=ULID(),
+            aggregate_id=uuid4(),
             data=AccountCreatedV1(owner_name="John Doe"),
             sequence_number=1,
         )
 
         # Event that should NOT be upcasted (no space)
         event_no = Event(
-            aggregate_id=ULID(),
+            aggregate_id=uuid4(),
             data=AccountCreatedV1(owner_name="Madonna"),
             sequence_number=2,
         )

@@ -1,7 +1,6 @@
 import contextvars
 from dataclasses import dataclass, replace
-
-from ulid import ULID
+from uuid import UUID, uuid4
 
 
 @dataclass(frozen=True)
@@ -42,12 +41,12 @@ class ExecutionContext:
         >>> # command_id is cleared
     """
 
-    correlation_id: ULID | None = None
-    causation_id: ULID | None = None
-    command_id: ULID | None = None
+    correlation_id: UUID | None = None
+    causation_id: UUID | None = None
+    command_id: UUID | None = None
 
     @classmethod
-    def create(cls, correlation_id: ULID | None = None) -> "ExecutionContext":
+    def create(cls, correlation_id: UUID | None = None) -> "ExecutionContext":
         """Create a new context, typically at a system entry point.
 
         Args:
@@ -68,7 +67,7 @@ class ExecutionContext:
             ... )
         """
         if correlation_id is None:
-            correlation_id = ULID()
+            correlation_id = uuid4()
 
         return cls(
             correlation_id=correlation_id,
@@ -76,7 +75,7 @@ class ExecutionContext:
             command_id=None,
         )
 
-    def for_command(self, command_id: ULID) -> "ExecutionContext":
+    def for_command(self, command_id: UUID) -> "ExecutionContext":
         """Create a child context for executing a command.
 
         The correlation_id is inherited. The command_id is set. When the command
@@ -95,7 +94,7 @@ class ExecutionContext:
         """
         return replace(self, command_id=command_id)
 
-    def for_event(self, event_id: ULID) -> "ExecutionContext":
+    def for_event(self, event_id: UUID) -> "ExecutionContext":
         """Create a child context for processing an event.
 
         The correlation_id is inherited. The causation_id becomes the event_id.
@@ -115,7 +114,7 @@ class ExecutionContext:
         """
         return replace(self, causation_id=event_id, command_id=None)
 
-    def with_causation(self, causation_id: ULID) -> "ExecutionContext":
+    def with_causation(self, causation_id: UUID) -> "ExecutionContext":
         """Create a new context with updated causation_id.
 
         Args:

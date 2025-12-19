@@ -1,9 +1,9 @@
 """Tests for aggregate repository."""
 
 from decimal import Decimal
+from uuid import uuid4
 
 import pytest
-from ulid import ULID
 
 from interlock.application.aggregates.repository.cache import (
     AggregateCacheBackend,
@@ -30,7 +30,7 @@ from tests.fixtures.test_app.aggregates.bank_account import (
 
 def test_aggregate_factory_create(bank_account_factory):
     """Test AggregateFactory creates aggregate with given ID."""
-    account_id = ULID()
+    account_id = uuid4()
     account = bank_account_factory.create(account_id)
 
     assert isinstance(account, BankAccount)
@@ -50,7 +50,7 @@ def test_aggregate_factory_get_type(bank_account_factory):
 @pytest.mark.asyncio
 async def test_repository_acquire_new_aggregate(repository):
     """Test acquiring a non-existent aggregate creates new instance."""
-    account_id = ULID()
+    account_id = uuid4()
 
     async with repository.acquire(account_id) as account:
         assert isinstance(account, BankAccount)
@@ -93,7 +93,7 @@ async def test_repository_acquire_from_cache(
     )
 
     # Pre-populate cache
-    account_id = ULID()
+    account_id = uuid4()
     cached_account = BankAccount(id=account_id)
     cached_account.owner = "Cached Alice"
     cached_account.version = 5
@@ -110,7 +110,7 @@ async def test_repository_acquire_from_cache(
 @pytest.mark.asyncio
 async def test_repository_acquire_from_snapshot(repository, in_memory_snapshot_backend):
     """Test repository loads from snapshot when no cache hit."""
-    account_id = ULID()
+    account_id = uuid4()
 
     # Create and save snapshot
     snapshot = BankAccount(id=account_id)
@@ -129,7 +129,7 @@ async def test_repository_acquire_from_snapshot(repository, in_memory_snapshot_b
 @pytest.mark.asyncio
 async def test_repository_acquire_with_events(repository):
     """Test repository replays events after snapshot."""
-    account_id = ULID()
+    account_id = uuid4()
 
     # Create account and emit events
     async with repository.acquire(account_id) as account:
@@ -146,7 +146,7 @@ async def test_repository_acquire_with_events(repository):
 @pytest.mark.asyncio
 async def test_repository_acquire_saves_on_change(repository):
     """Test repository auto-saves when aggregate changes."""
-    account_id = ULID()
+    account_id = uuid4()
 
     # Create and modify aggregate
     async with repository.acquire(account_id) as account:
@@ -163,7 +163,7 @@ async def test_repository_acquire_saves_on_change(repository):
 @pytest.mark.asyncio
 async def test_repository_acquire_no_save_unchanged(repository):
     """Test repository doesn't save if aggregate unchanged."""
-    account_id = ULID()
+    account_id = uuid4()
 
     # Create account
     async with repository.acquire(account_id) as account:
@@ -182,7 +182,7 @@ async def test_repository_acquire_no_save_unchanged(repository):
 @pytest.mark.asyncio
 async def test_repository_acquire_clears_events_on_error(repository):
     """Test repository clears uncommitted events on exception."""
-    account_id = ULID()
+    account_id = uuid4()
 
     # Create account first
     async with repository.acquire(account_id) as account:
@@ -216,7 +216,7 @@ async def test_repository_snapshots_on_save(
         AggregateCacheBackend.null(),
     )
 
-    account_id = ULID()
+    account_id = uuid4()
 
     # Create account and reach version 2
     async with repository.acquire(account_id) as account:
@@ -280,7 +280,7 @@ async def test_repository_handles_concurrency_error(
         tracking_cache,
     )
 
-    account_id = ULID()
+    account_id = uuid4()
 
     # Attempt to modify aggregate - should raise ConcurrencyError
     with pytest.raises(ConcurrencyError):
@@ -326,7 +326,7 @@ async def test_repository_caches_on_read_without_changes(
         tracking_cache,
     )
 
-    account_id = ULID()
+    account_id = uuid4()
 
     # Create account
     async with repository.acquire(account_id) as account:
@@ -359,8 +359,8 @@ async def test_repository_caches_on_read_without_changes(
 async def test_repository_list_all_ids(repository, in_memory_snapshot_backend):
     """Test repository lists all aggregate IDs."""
     # Create multiple accounts
-    account1_id = ULID()
-    account2_id = ULID()
+    account1_id = uuid4()
+    account2_id = uuid4()
 
     async with repository.acquire(account1_id) as account:
         account.handle(OpenAccount(aggregate_id=account1_id, owner="Kate"))
