@@ -114,7 +114,9 @@ class SagaScenario(Scenario[TSagaState], Generic[TSaga, TSagaState]):
     def should_have_state(
         self, saga_id: str, predicate: Callable[[TSagaState], bool]
     ) -> "SagaScenario[TSaga, TSagaState]":
-        self.expectations.append(StateMatches[TSagaState](saga_id, cast("NullablePredicate", predicate)))
+        self.expectations.append(
+            StateMatches[TSagaState](saga_id, cast("NullablePredicate", predicate))
+        )
         return self
 
     async def get_state(self, state_key: Any) -> TSagaState | None:

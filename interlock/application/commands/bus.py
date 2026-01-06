@@ -1,10 +1,7 @@
 """Command bus and routing infrastructure."""
 
 from collections.abc import Callable, Coroutine
-from functools import reduce
 from typing import Any, TypeVar, cast
-
-from pydantic import BaseModel
 
 from ...domain import Aggregate, Command
 from ..aggregates import AggregateRepository
@@ -100,7 +97,7 @@ class CommandBus:
         self.middleware = middleware
         # Build the middleware chain by reducing from right to left
         # Use Handler type (BaseModel -> Coroutine) for middleware compatibility
-        chain: Handler = cast(Handler, self.root_handler.handle)
+        chain: Handler = cast("Handler", self.root_handler.handle)
         for mw in reversed(middleware):
             prev_chain = chain
 
