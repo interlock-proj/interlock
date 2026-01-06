@@ -29,12 +29,12 @@ implementations to match your infrastructure:
 
 | Component | [MongoDB](#mongodb) | [Neo4j](#neo4j) | [Kafka](#kafka) | [Redis](#redis) | [SQLite](#sqlite) |
 |-----------|:-------------------:|:---------------:|:---------------:|:---------------:|:-----------------:|
-| `EventStore` | 🟡 | 🟡 | ❌ | ❌ | 🟡 |
+| `EventStore` | ✅ | 🟡 | ❌ | ❌ | 🟡 |
 | `EventTransport` | ❌ | ❌ | 🟡 | ❌ | ❌ |
-| `SagaStateStore` | 🟡 | 🟡 | ❌ | 🟡 | 🟡 |
-| `AggregateSnapshotStorageBackend` | 🟡 | 🟡 | ❌ | 🟡 | 🟡 |
+| `SagaStateStore` | ✅ | 🟡 | ❌ | 🟡 | 🟡 |
+| `AggregateSnapshotStorageBackend` | ✅ | 🟡 | ❌ | 🟡 | 🟡 |
 | `AggregateCacheBackend` | ❌ | ❌ | ❌ | 🟡 | ❌ |
-| `IdempotencyStorageBackend` | 🟡 | ❌ | ❌ | 🟡 | 🟡 |
+| `IdempotencyStorageBackend` | ✅ | ❌ | ❌ | 🟡 | 🟡 |
 
 **Legend:** ✅ Supported | 🟡 Planned | ❌ Not Applicable
 
@@ -70,6 +70,14 @@ app = (
 
 A document database well-suited for storing events and state.
 
+### Installation
+
+```bash
+pip install interlock[mongodb]
+# or
+uv add interlock[mongodb]
+```
+
 ### Interlock Roles
 
 | Component | Fit |
@@ -89,13 +97,19 @@ A document database well-suited for storing events and state.
 
 | Component | Status |
 |-----------|--------|
-| `EventStore` | 🟡 Planned |
-| `SagaStateStore` | 🟡 Planned |
-| `AggregateSnapshotStorageBackend` | 🟡 Planned |
-| `IdempotencyStorageBackend` | 🟡 Planned |
+| `EventStore` | ✅ Supported |
+| `SagaStateStore` | ✅ Supported |
+| `AggregateSnapshotStorageBackend` | ✅ Supported |
+| `IdempotencyStorageBackend` | ✅ Supported |
+
+### Usage
 
 ```python
-# Coming soon
+from interlock import ApplicationBuilder
+from interlock.application.events import EventStore
+from interlock.application.events.processing import SagaStateStore
+from interlock.application.aggregates.repository.snapshot import AggregateSnapshotStorageBackend
+from interlock.application.middleware import IdempotencyStorageBackend
 from interlock.integrations.mongodb import (
     MongoConfiguration,
     MongoEventStore,
@@ -114,6 +128,44 @@ app = (
     .build()
 )
 ```
+
+### Configuration
+
+`MongoConfiguration` reads from environment variables with the `INTERLOCK_MONGO_` prefix:
+
+| Environment Variable | Default | Description |
+|---------------------|---------|-------------|
+| `INTERLOCK_MONGO_URI` | `mongodb://localhost:27017` | MongoDB connection URI |
+| `INTERLOCK_MONGO_DATABASE` | `interlock` | Database name |
+| `INTERLOCK_MONGO_EVENTS_COLLECTION` | `events` | Collection for events |
+| `INTERLOCK_MONGO_SAGA_STATES_COLLECTION` | `saga_states` | Collection for saga state |
+| `INTERLOCK_MONGO_SNAPSHOTS_COLLECTION` | `snapshots` | Collection for snapshots |
+| `INTERLOCK_MONGO_IDEMPOTENCY_KEYS_COLLECTION` | `idempotency_keys` | Collection for idempotency keys |
+| `INTERLOCK_MONGO_SNAPSHOT_MODE` | `single` | `single` (overwrite) or `multiple` (keep history) |
+| `INTERLOCK_MONGO_IDEMPOTENCY_TTL_SECONDS` | `86400` | TTL for idempotency keys (24 hours) |
+
+### Snapshot Modes
+
+The snapshot storage supports two modes:
+
+- **`single`** (default): One snapshot per aggregate. Overwrites on save. Lower storage, simpler queries.
+- **`multiple`**: Keeps version history. Supports loading snapshots at specific versions for debugging or replay.
+
+```python
+# Configure via environment
+# INTERLOCK_MONGO_SNAPSHOT_MODE=multiple
+
+# Or programmatically
+config = MongoConfiguration(snapshot_mode="multiple")
+```
+
+### Indexes
+
+Indexes are created automatically on first use:
+
+- **Events**: Unique compound index on `(aggregate_id, sequence_number)` for optimistic concurrency
+- **Snapshots**: Unique index on `aggregate_id` (single mode) or `(aggregate_id, version)` (multiple mode)
+- **Idempotency**: TTL index on `created_at` for automatic cleanup
 
 ---
 

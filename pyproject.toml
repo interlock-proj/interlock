@@ -28,6 +28,9 @@ docs = [
     "mkdocs-literate-nav>=0.6.0",
     "mkdocs-section-index>=0.3.0",
 ]
+mongodb = [
+    "pymongo>=4.0.0",
+]
 
 [build-system]
 requires = ["hatchling"]
