@@ -117,7 +117,7 @@ class IdempotencyMiddleware(Middleware):
         self.idempotency_storage_backend = idempotency_storage_backend
 
     @intercepts
-    async def ensure_idempotency(self, command: Command, next: Handler) -> Any:
+    async def ensure_idempotency(self, command: Command, next: Handler) -> Any:  # type: ignore[type-arg]
         """Check idempotency and process command if not processed.
 
         Commands with an `idempotency_key` attribute are checked against
@@ -162,7 +162,7 @@ class InMemoryIdempotencyStorageBackend(IdempotencyStorageBackend):
 
     __slots__ = ("idempotency_keys",)
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.idempotency_keys: set[str] = set()
 
     async def store_idempotency_key(self, key: str) -> None:

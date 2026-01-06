@@ -52,7 +52,7 @@ class Result(Generic[TState]):
 
 class Expectation(ABC):
     @abstractmethod
-    def was_met(self, result: Result) -> bool:
+    def was_met(self, result: Result[Any]) -> bool:
         pass
 
     @abstractmethod
@@ -62,7 +62,7 @@ class Expectation(ABC):
     def requires_state(self) -> Iterable[Any]:
         return []
 
-    def assert_met(self, result: Result) -> None:
+    def assert_met(self, result: Result[Any]) -> None:
         if not self.was_met(result):
             raise AssertionError(f"Expectation not met: {self.describe()}")
 
@@ -71,7 +71,7 @@ class ContainsEventOfExactPayload(Expectation):
     def __init__(self, payload: BaseModel):
         self.payload = payload
 
-    def was_met(self, result: Result) -> bool:
+    def was_met(self, result: Result[Any]) -> bool:
         return result.contains_event(self.payload)
 
     def describe(self) -> str:
@@ -82,7 +82,7 @@ class ContainsEventOfExactType(Expectation):
     def __init__(self, event_type: type[BaseModel]):
         self.event_type = event_type
 
-    def was_met(self, result: Result) -> bool:
+    def was_met(self, result: Result[Any]) -> bool:
         return result.contains_event_of_type(self.event_type)
 
     def describe(self) -> str:
@@ -93,7 +93,7 @@ class ContainsErrorOfExactType(Expectation):
     def __init__(self, error_type: type[Exception]):
         self.error_type = error_type
 
-    def was_met(self, result: Result) -> bool:
+    def was_met(self, result: Result[Any]) -> bool:
         return result.contains_error_of_type(self.error_type)
 
     def describe(self) -> str:
@@ -101,19 +101,19 @@ class ContainsErrorOfExactType(Expectation):
 
 
 class DoesNotHaveEvents(Expectation):
-    def was_met(self, result: Result) -> bool:
+    def was_met(self, result: Result[Any]) -> bool:
         return len(result.events) == 0
 
     def describe(self) -> str:
         return "should not emit any events"
 
 
-class StateMatches(Expectation):
+class StateMatches(Expectation, Generic[TState]):
     def __init__(self, state_key: Any, predicate: Callable[[TState | None], bool]):
         self.state_key = state_key
         self.predicate = predicate
 
-    def was_met(self, result: Result) -> bool:
+    def was_met(self, result: Result[Any]) -> bool:
         return result.state_matches(self.state_key, self.predicate)
 
     def describe(self) -> str:
@@ -124,7 +124,7 @@ class StateMatches(Expectation):
 
 
 class Scenario(ABC, Generic[TState]):
-    def __init__(self):
+    def __init__(self) -> None:
         self.event_payloads: list[BaseModel] = []
         self.expectations: list[Expectation] = []
         self.errors: list[Exception] = []

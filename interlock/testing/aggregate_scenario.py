@@ -33,7 +33,7 @@ class AggregateScenario(Scenario[A], Generic[A]):
         super().__init__()
         self.aggregate_id = aggregate_id or uuid4()
         self.aggregate = aggregate(id=self.aggregate_id)
-        self.commands: list[Command] = []
+        self.commands: list[Command[Any]] = []
 
     async def perform_actions(self) -> None:
         # We can call _emit_ here since we are directly creating an
@@ -51,7 +51,7 @@ class AggregateScenario(Scenario[A], Generic[A]):
         self.aggregate.clear_uncommitted_events()
         self.event_payloads.clear()
 
-    def _execute_commands(self):
+    def _execute_commands(self) -> None:
         for command in self.commands:
             try:
                 self.aggregate.handle(command)
@@ -60,7 +60,7 @@ class AggregateScenario(Scenario[A], Generic[A]):
 
         self.event_payloads.extend(self.aggregate.uncommitted_events)
 
-    def when(self, *commands: Command) -> "AggregateScenario[A]":
+    def when(self, *commands: Command[Any]) -> "AggregateScenario[A]":
         self.commands.extend(commands)
         return self
 
@@ -80,7 +80,7 @@ class AggregateScenario(Scenario[A], Generic[A]):
 
     def should_have_state(self, predicate: Callable[[A], bool]) -> "AggregateScenario[A]":
         self.expectations.append(
-            StateMatches(self.aggregate_id, cast("Callable[[A | None], bool]", predicate))
+            StateMatches[A](self.aggregate_id, cast("Callable[[A | None], bool]", predicate))
         )
         return self
 

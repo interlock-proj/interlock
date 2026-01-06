@@ -53,7 +53,7 @@ class LoggingMiddleware(Middleware):
         self.level = getattr(logging, level.upper())
 
     @intercepts
-    async def log_command(self, command: Command, next: Handler) -> Any:
+    async def log_command(self, command: Command, next: Handler) -> Any:  # type: ignore[type-arg]
         """Log the command type with correlation context.
 
         Args:

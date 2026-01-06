@@ -135,5 +135,5 @@ class Projection(EventProcessor):
 
         # If the handler is async, await the coroutine
         if inspect.iscoroutine(result):
-            return await result
+            result = await result
         return result  # type: ignore[return-value]

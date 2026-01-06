@@ -150,10 +150,10 @@ class UpcasterMap:
             map.register_upcaster(upcaster)
         return map
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.upcasters: dict[type[BaseModel], list[EventUpcaster[Any, Any]]] = {}
 
-    def register_upcaster(self, upcaster: EventUpcaster[Any, Any]):
+    def register_upcaster(self, upcaster: EventUpcaster[Any, Any]) -> None:
         source_type, _ = extract_upcaster_types(type(upcaster))
         if source_type not in self.upcasters:
             self.upcasters[source_type] = []

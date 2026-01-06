@@ -57,7 +57,7 @@ class ConcurrencyRetryMiddleware(Middleware):
         self.retry_delay = retry_delay
 
     @intercepts
-    async def retry_on_concurrency(self, command: Command, next: Handler) -> Any:
+    async def retry_on_concurrency(self, command: Command, next: Handler) -> Any:  # type: ignore[type-arg]
         """Intercept all commands and retry on concurrency errors.
 
         Args:

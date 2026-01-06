@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime
-from typing import TYPE_CHECKING, Generic, TypeVar
+from typing import TYPE_CHECKING, Any, Generic, TypeVar
 
 if TYPE_CHECKING:
     from ....domain import Event
@@ -36,7 +36,7 @@ class CatchupResult:
 
     skip_before: datetime | None = None
 
-    def should_skip(self, event: "Event") -> bool:
+    def should_skip(self, event: "Event[Any]") -> bool:
         """Check if an event should be skipped (already processed during catchup).
 
         Args:
@@ -91,7 +91,7 @@ class CatchupStrategy(ABC, Generic[P]):
         ...
 
 
-class NoCatchup(CatchupStrategy):
+class NoCatchup(CatchupStrategy["EventProcessor"]):
     """No catchup - processor starts from current position.
 
     Use this strategy when:

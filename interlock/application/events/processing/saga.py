@@ -277,7 +277,8 @@ class SagaStepExecutor(ABC):
     def extract_saga_id(self, event: BaseModel) -> str:
         """Extract saga_id from event using extractor or convention."""
         if self.saga_id_extractor is not None:
-            return self.saga_id_extractor(event)  # type: ignore
+            result: str = self.saga_id_extractor(event)
+            return result
 
         saga_id = getattr(event, "saga_id", None)
         if saga_id is None:
@@ -286,7 +287,7 @@ class SagaStepExecutor(ABC):
                 f"'saga_id' field, or provide a custom extractor: "
                 f"@saga_step(saga_id=lambda e: e.your_field)"
             )
-        return saga_id
+        return str(saga_id)
 
     async def check_idempotency(self, saga: Saga[Any], saga_id: str) -> bool:
         """Check if step is already complete. Returns True if should skip."""
@@ -438,7 +439,9 @@ def saga_step(
         func_name = getattr(func, "__name__", repr(func))
         resolved_step_name = step_name or func_name
         variant = SagaStepExecutor.executor_from_function(func)
-        executor = variant(resolved_step_name, saga_id, func)
+        # Cast saga_id to the expected type for SagaStepExecutor
+        saga_id_extractor: Callable[[BaseModel], str] | None = saga_id  # type: ignore[assignment]
+        executor = variant(resolved_step_name, saga_id_extractor, func)
 
         @handles_event
         @wraps(func)

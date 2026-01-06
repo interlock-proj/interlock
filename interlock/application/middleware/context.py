@@ -67,7 +67,7 @@ class ContextPropagationMiddleware(Middleware):
     """
 
     @intercepts
-    async def propagate_context(self, command: Command, next: Handler) -> Any:
+    async def propagate_context(self, command: Command, next: Handler) -> Any:  # type: ignore[type-arg]
         """Set up execution context and pass command to next handler.
 
         The context is cleared after command execution (even on

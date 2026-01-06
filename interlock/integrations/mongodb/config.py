@@ -124,4 +124,4 @@ class MongoConfiguration(BaseSettings):
         Closes the MongoDB client connection if it was created.
         """
         if "client" in self.__dict__:
-            self.client.close()
+            await self.client.close()

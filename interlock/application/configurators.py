@@ -114,5 +114,5 @@ class UpcastersInPackage(ApplicationProfile):
 
     def configure(self, builder: ApplicationBuilder) -> None:
         for module in self.scanner.find_modules("upcaster"):
-            for cls in ClassScanner.find_subclasses(module, EventUpcaster):
+            for cls in ClassScanner.find_subclasses(module, EventUpcaster):  # type: ignore[type-abstract]
                 builder.register_upcaster(cls)

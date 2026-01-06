@@ -2,10 +2,12 @@
 
 from collections.abc import Callable, Coroutine
 from functools import reduce
-from typing import Any, TypeVar
+from typing import Any, TypeVar, cast
+
+from pydantic import BaseModel
 
 from ...domain import Query
-from ..middleware import Middleware
+from ..middleware import Handler, Middleware
 from .projection import Projection
 
 T = TypeVar("T")
@@ -164,11 +166,16 @@ class QueryBus:
         self.root_handler = root_handler
         self.middleware = middleware
         # Build the middleware chain by reducing from right to left
-        self.chain: Callable[[Query[Any]], Coroutine[Any, Any, Any]] = reduce(
-            lambda next, mw: lambda q, n=next, m=mw: m.intercept(q, n),
-            reversed(middleware),
-            self.root_handler.handle,
-        )
+        # Use Handler type (BaseModel -> Coroutine) for middleware compatibility
+        chain: Handler = cast(Handler, self.root_handler.handle)
+        for mw in reversed(middleware):
+            prev_chain = chain
+
+            def make_chain(m: Middleware, n: Handler) -> Handler:
+                return lambda msg: m.intercept(msg, n)
+
+            chain = make_chain(mw, prev_chain)
+        self.chain = chain
 
     async def dispatch(self, query: Query[T]) -> T:
         """Dispatch query through the middleware chain to handler.
@@ -179,4 +186,5 @@ class QueryBus:
         Returns:
             The result from the query handler.
         """
-        return await self.chain(query)
+        result: T = await self.chain(query)
+        return result

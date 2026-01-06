@@ -136,7 +136,7 @@ class Application:
         implement the `HasLifecycle` protocol. The dependencies are started
         in the order of their registration.
         """
-        dependencies = self.contextual_binding.resolve_all_of_type(HasLifecycle)
+        dependencies = self.contextual_binding.resolve_all_of_type(HasLifecycle)  # type: ignore[type-abstract]
         for dependency in dependencies:
             await dependency.on_startup()
 
@@ -148,7 +148,7 @@ class Application:
         implement the `HasLifecycle` protocol. The dependencies are shutdown
         in the reverse order of their registration.
         """
-        dependencies = self.contextual_binding.resolve_all_of_type(HasLifecycle)
+        dependencies = self.contextual_binding.resolve_all_of_type(HasLifecycle)  # type: ignore[type-abstract]
         for dependency in reversed(dependencies):
             await dependency.on_shutdown()
 
@@ -190,7 +190,7 @@ class Application:
             for processor in processors
         ]
 
-        transport = self.contextual_binding.resolve(EventTransport)
+        transport = self.contextual_binding.resolve(EventTransport)  # type: ignore[type-abstract]
         subscriptions = [
             await transport.subscribe(executor.processor.__class__.__name__)
             for executor in executors
@@ -210,7 +210,7 @@ class Application:
         self,
         aggregate_type: type[Aggregate],
         aggregate_id: UUID | None = None,
-    ) -> "AggregateScenario":
+    ) -> "AggregateScenario[Any]":
         """Create a test scenario for an aggregate.
 
         This provides a consistent testing API across all Interlock components.
@@ -237,7 +237,7 @@ class Application:
     def processor_scenario(
         self,
         processor_type: type[EventProcessor],
-    ) -> "ProcessorScenario":
+    ) -> "ProcessorScenario[Any]":
         """Create a test scenario for an event processor with DI.
 
         The processor is instantiated using the application's dependency
@@ -270,7 +270,7 @@ class Application:
     def saga_scenario(
         self,
         saga_type: type,
-    ) -> "SagaScenario":
+    ) -> "SagaScenario[Any, Any]":
         """Create a test scenario for a saga with DI.
 
         The saga is instantiated using the application's dependency
@@ -292,7 +292,7 @@ class Application:
         from .events.processing import Saga
 
         # Resolve the saga from the DI container
-        saga = self.contextual_binding.container_for(saga_type).resolve(saga_type)
+        saga: Saga[Any] = self.contextual_binding.container_for(saga_type).resolve(saga_type)
         if not isinstance(saga, Saga):
             raise TypeError(f"Expected Saga instance, got {type(saga).__name__}")
         return SagaScenario(saga)
@@ -300,7 +300,7 @@ class Application:
     def projection_scenario(
         self,
         projection_type: type[Projection],
-    ) -> "ProjectionScenario":
+    ) -> "ProjectionScenario[Any]":
         """Create a test scenario for a projection with DI.
 
         The projection is instantiated using the application's dependency
@@ -356,15 +356,15 @@ class ApplicationBuilder:
 
         # Event Bus Defaults:
         self.container.register_singleton(
-            dependency_type=UpcastingStrategy,
+            dependency_type=UpcastingStrategy,  # type: ignore[type-abstract]
             factory=LazyUpcastingStrategy,
         )
         self.container.register_singleton(
-            dependency_type=EventTransport,
+            dependency_type=EventTransport,  # type: ignore[type-abstract]
             factory=InMemoryEventTransport,
         )
         self.container.register_singleton(
-            dependency_type=EventStore,
+            dependency_type=EventStore,  # type: ignore[type-abstract]
             factory=InMemoryEventStore,
         )
         self.container.register_singleton(
@@ -373,36 +373,36 @@ class ApplicationBuilder:
         )
         self.container.register_singleton(UpcastingPipeline)
         self.container.register_singleton(
-            dependency_type=EventDelivery,
+            dependency_type=EventDelivery,  # type: ignore[type-abstract]
             factory=self._build_synchronous_delivery,
         )
         self.container.register_singleton(EventBus)
 
         # Aggregate Repository Defaults:
         self.container.register_singleton(
-            dependency_type=AggregateSnapshotStrategy,
+            dependency_type=AggregateSnapshotStrategy,  # type: ignore[type-abstract]
             factory=AggregateSnapshotStrategy.never,
         )
         self.container.register_singleton(
-            dependency_type=AggregateCacheBackend,
+            dependency_type=AggregateCacheBackend,  # type: ignore[type-abstract]
             factory=AggregateCacheBackend.null,
         )
         self.container.register_singleton(
-            dependency_type=AggregateSnapshotStorageBackend,
+            dependency_type=AggregateSnapshotStorageBackend,  # type: ignore[type-abstract]
             factory=AggregateSnapshotStorageBackend.null,
         )
 
         # Event Processor Defaults:
         self.container.register_singleton(
-            dependency_type=CatchupCondition,
+            dependency_type=CatchupCondition,  # type: ignore[type-abstract]
             factory=Never,
         )
         self.container.register_singleton(
-            dependency_type=CatchupStrategy,
+            dependency_type=CatchupStrategy,  # type: ignore[type-abstract]
             factory=NoCatchup,
         )
         self.container.register_singleton(
-            dependency_type=CacheStrategy,
+            dependency_type=CacheStrategy,  # type: ignore[type-abstract]
             factory=CacheStrategy.never,
         )
 
@@ -421,7 +421,7 @@ class ApplicationBuilder:
             factory=self._build_command_bus,
         )
 
-        self.container.register_singleton(SagaStateStore, SagaStateStore.in_memory)
+        self.container.register_singleton(SagaStateStore, SagaStateStore.in_memory)  # type: ignore[type-abstract]
 
         # Query Bus Defaults:
         self.container.register_singleton(
@@ -499,22 +499,22 @@ class ApplicationBuilder:
         container.register_singleton(AggregateRepository)
         if cache_strategy:
             container.register_singleton(
-                dependency_type=CacheStrategy,
+                dependency_type=CacheStrategy,  # type: ignore[type-abstract]
                 factory=cache_strategy,
             )
         if snapshot_strategy:
             container.register_singleton(
-                dependency_type=AggregateSnapshotStrategy,
+                dependency_type=AggregateSnapshotStrategy,  # type: ignore[type-abstract]
                 factory=snapshot_strategy,
             )
         if cache_backend:
             container.register_singleton(
-                dependency_type=AggregateCacheBackend,
+                dependency_type=AggregateCacheBackend,  # type: ignore[type-abstract]
                 factory=cache_backend,
             )
         if snapshot_backend:
             container.register_singleton(
-                dependency_type=AggregateSnapshotStorageBackend,
+                dependency_type=AggregateSnapshotStorageBackend,  # type: ignore[type-abstract]
                 factory=snapshot_backend,
             )
         return self
@@ -546,7 +546,7 @@ class ApplicationBuilder:
         self,
         processor_type: type[EventProcessor],
         catchup_condition: CatchupCondition | None = None,
-        catchup_strategy: CatchupStrategy | None = None,
+        catchup_strategy: "CatchupStrategy[Any] | None" = None,
     ) -> "ApplicationBuilder":
         """Creates or updates the registration of an event processor.
 
@@ -568,16 +568,16 @@ class ApplicationBuilder:
         container.register_singleton(processor_type)
         container.register_singleton(EventProcessorExecutor)
         if catchup_condition:
-            container.register_singleton(CatchupCondition, lambda: catchup_condition)
+            container.register_singleton(CatchupCondition, lambda: catchup_condition)  # type: ignore[type-abstract]
         if catchup_strategy:
-            container.register_singleton(CatchupStrategy, lambda: catchup_strategy)
+            container.register_singleton(CatchupStrategy, lambda: catchup_strategy)  # type: ignore[type-abstract]
         return self
 
     def register_projection(
         self,
         projection_type: type[Projection],
         catchup_condition: CatchupCondition | None = None,
-        catchup_strategy: CatchupStrategy | None = None,
+        catchup_strategy: "CatchupStrategy[Any] | None" = None,
     ) -> "ApplicationBuilder":
         """Register a projection with the application.
 
@@ -604,9 +604,9 @@ class ApplicationBuilder:
         container.register_singleton(EventProcessor, projection_type)
         container.register_singleton(EventProcessorExecutor)
         if catchup_condition:
-            container.register_singleton(CatchupCondition, lambda: catchup_condition)
+            container.register_singleton(CatchupCondition, lambda: catchup_condition)  # type: ignore[type-abstract]
         if catchup_strategy:
-            container.register_singleton(CatchupStrategy, lambda: catchup_strategy)
+            container.register_singleton(CatchupStrategy, lambda: catchup_strategy)  # type: ignore[type-abstract]
         return self
 
     def register_upcaster(
@@ -636,7 +636,7 @@ class ApplicationBuilder:
         container = self.contextual_binding.container_for(upcaster)
         container.register_singleton(upcaster, upcaster)
         if upcasting_strategy:
-            container.register_singleton(UpcastingStrategy, upcasting_strategy)
+            container.register_singleton(UpcastingStrategy, upcasting_strategy)  # type: ignore[type-abstract]
         return self
 
     def convention_based(self, package_name: str) -> "ApplicationBuilder":
@@ -687,11 +687,11 @@ class ApplicationBuilder:
         return AggregateToRepositoryMap.from_repositories(all_repositories)
 
     def _build_upcaster_map(self) -> UpcasterMap:
-        all = self.contextual_binding.resolve_all_of_type(EventUpcaster)
+        all = self.contextual_binding.resolve_all_of_type(EventUpcaster)  # type: ignore[type-abstract]
         return UpcasterMap.from_upcasters(all)
 
     def _build_synchronous_delivery(self) -> SynchronousDelivery:
-        transport = self.container.resolve(EventTransport)
+        transport = self.container.resolve(EventTransport)  # type: ignore[type-abstract]
         all = self.contextual_binding.resolve_all_of_type(EventProcessor)
         return SynchronousDelivery(transport, all)
 

@@ -63,7 +63,7 @@ class ProcessorScenario(Scenario[Any], Generic[TProcessor]):
         self, predicate: Callable[[TProcessor], bool]
     ) -> "ProcessorScenario[TProcessor]":
         self.expectations.append(
-            StateMatches(PROCESSOR_STATE_KEY, cast("NullablePredicate", predicate))
+            StateMatches[Any](PROCESSOR_STATE_KEY, cast("NullablePredicate", predicate))
         )
         return self
 
@@ -114,7 +114,7 @@ class SagaScenario(Scenario[TSagaState], Generic[TSaga, TSagaState]):
     def should_have_state(
         self, saga_id: str, predicate: Callable[[TSagaState], bool]
     ) -> "SagaScenario[TSaga, TSagaState]":
-        self.expectations.append(StateMatches(saga_id, cast("NullablePredicate", predicate)))
+        self.expectations.append(StateMatches[TSagaState](saga_id, cast("NullablePredicate", predicate)))
         return self
 
     async def get_state(self, state_key: Any) -> TSagaState | None:
@@ -201,7 +201,7 @@ class ProjectionScenario(Scenario[Any], Generic[TProjection]):
             Self for chaining.
         """
         self.expectations.append(
-            StateMatches(PROJECTION_STATE_KEY, cast("NullablePredicate", predicate))
+            StateMatches[Any](PROJECTION_STATE_KEY, cast("NullablePredicate", predicate))
         )
         return self
 

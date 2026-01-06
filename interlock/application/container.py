@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 from collections import OrderedDict
 from collections.abc import Callable
 from itertools import chain
-from typing import Any, Generic, Optional, TypeVar, get_origin
+from typing import Any, Generic, Optional, TypeVar, cast, get_origin
 
 T = TypeVar("T")
 
@@ -63,7 +63,7 @@ class SingletonDependency(Dependency[T]):
 
 class DependencyContainer:
     def __init__(self, parent: Optional["DependencyContainer"] = None):
-        self.dependencies: dict[type, Dependency] = {}
+        self.dependencies: dict[type, Dependency[Any]] = {}
         self.parent = parent
 
     def child(self) -> "DependencyContainer":
@@ -78,13 +78,13 @@ class DependencyContainer:
         # First check ourselves for the dependency and then fall back to the
         # parent container if it exists.
         if dependency_type in self.dependencies:
-            return self.dependencies[dependency_type].resolve(self)
+            return cast(T, self.dependencies[dependency_type].resolve(self))
 
         # If the dependency is a generic type (e.g., AggregateFactory[A]),
         # try to resolve using the origin type (e.g., AggregateFactory)
         origin = get_origin(dependency_type)
         if origin is not None and origin in self.dependencies:
-            return self.dependencies[origin].resolve(self)
+            return cast(T, self.dependencies[origin].resolve(self))
 
         if self.parent is not None:
             return self.parent.resolve(dependency_type)
