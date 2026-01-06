@@ -56,6 +56,4 @@ def load_type(qualified_name: str) -> type[Any]:
     try:
         return getattr(module, class_name)  # type: ignore[no-any-return]
     except AttributeError:
-        raise ImportError(
-            f"Module '{module_path}' has no attribute '{class_name}'"
-        ) from None
+        raise ImportError(f"Module '{module_path}' has no attribute '{class_name}'") from None

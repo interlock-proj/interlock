@@ -142,14 +142,10 @@ class MongoEventStore(EventStore):
         current_version = latest["sequence_number"] if latest else 0
 
         if current_version != expected_version:
-            raise ConcurrencyError(
-                f"Expected version {expected_version}, got {current_version}"
-            )
+            raise ConcurrencyError(f"Expected version {expected_version}, got {current_version}")
 
         # Convert events to documents
-        documents = [
-            EventDocument.from_value(event).model_dump(mode="json") for event in events
-        ]
+        documents = [EventDocument.from_value(event).model_dump(mode="json") for event in events]
 
         try:
             await self._collection.insert_many(documents, ordered=True)

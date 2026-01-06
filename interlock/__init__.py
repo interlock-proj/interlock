@@ -29,4 +29,3 @@ __all__ = [
     "handles_query",
     "intercepts",
 ]
-

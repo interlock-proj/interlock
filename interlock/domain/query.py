@@ -51,4 +51,3 @@ class Query(BaseModel, Generic[TResponse]):
     query_id: UUID = Field(default_factory=uuid4)
     correlation_id: UUID | None = None
     causation_id: UUID | None = None
-

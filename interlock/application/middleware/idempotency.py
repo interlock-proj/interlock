@@ -183,4 +183,3 @@ class NullIdempotencyStorageBackend(IdempotencyStorageBackend):
 
     async def has_idempotency_key(self, key: str) -> bool:
         return False
-

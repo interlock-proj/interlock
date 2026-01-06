@@ -107,4 +107,3 @@ class ContextPropagationMiddleware(Middleware):
         finally:
             # Always clear context after command execution to prevent leakage
             clear_context()
-

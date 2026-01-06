@@ -137,4 +137,3 @@ class Projection(EventProcessor):
         if inspect.iscoroutine(result):
             return await result
         return result  # type: ignore[return-value]
-

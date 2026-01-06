@@ -84,22 +84,16 @@ async def test_single_mode_intended_version_filter(
     await single_snapshot_storage.save_snapshot(aggregate)
 
     # Load with higher intended version - should work
-    loaded = await single_snapshot_storage.load_snapshot(
-        aggregate.id, intended_version=15
-    )
+    loaded = await single_snapshot_storage.load_snapshot(aggregate.id, intended_version=15)
     assert loaded is not None
     assert loaded.version == 10
 
     # Load with exact intended version - should work
-    loaded = await single_snapshot_storage.load_snapshot(
-        aggregate.id, intended_version=10
-    )
+    loaded = await single_snapshot_storage.load_snapshot(aggregate.id, intended_version=10)
     assert loaded is not None
 
     # Load with lower intended version - should return None
-    loaded = await single_snapshot_storage.load_snapshot(
-        aggregate.id, intended_version=5
-    )
+    loaded = await single_snapshot_storage.load_snapshot(aggregate.id, intended_version=5)
     assert loaded is None
 
 
@@ -165,25 +159,19 @@ async def test_multiple_mode_keeps_versions(
     assert loaded.balance == 300
 
     # Load with intended_version=12 (should get version 10)
-    loaded = await multiple_snapshot_storage.load_snapshot(
-        aggregate_id, intended_version=12
-    )
+    loaded = await multiple_snapshot_storage.load_snapshot(aggregate_id, intended_version=12)
     assert loaded is not None
     assert loaded.version == 10
     assert loaded.balance == 200
 
     # Load with intended_version=7 (should get version 5)
-    loaded = await multiple_snapshot_storage.load_snapshot(
-        aggregate_id, intended_version=7
-    )
+    loaded = await multiple_snapshot_storage.load_snapshot(aggregate_id, intended_version=7)
     assert loaded is not None
     assert loaded.version == 5
     assert loaded.balance == 100
 
     # Load with intended_version=3 (should return None - no snapshot at or below 3)
-    loaded = await multiple_snapshot_storage.load_snapshot(
-        aggregate_id, intended_version=3
-    )
+    loaded = await multiple_snapshot_storage.load_snapshot(aggregate_id, intended_version=3)
     assert loaded is None
 
 

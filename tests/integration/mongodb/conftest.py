@@ -1,7 +1,7 @@
 """Pytest fixtures for MongoDB integration tests."""
 
-from contextlib import asynccontextmanager
 from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from typing import Literal
 
 import pytest

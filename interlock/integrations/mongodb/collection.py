@@ -208,9 +208,7 @@ class IndexedCollection:
         """
         await self.ensure_indexes()
 
-        cursor = (
-            self._collection.find(filter).sort(sort_field, DESCENDING).limit(1)
-        )
+        cursor = self._collection.find(filter).sort(sort_field, DESCENDING).limit(1)
 
         async for doc in cursor:
             result: dict[str, Any] = doc
@@ -261,9 +259,7 @@ class IndexedCollection:
             UpdateResult with modified_count and upserted_id.
         """
         await self.ensure_indexes()
-        result = await self._collection.update_one(
-            filter, update, upsert=upsert
-        )
+        result = await self._collection.update_one(filter, update, upsert=upsert)
         return UpdateResult(
             modified_count=result.modified_count,
             upserted_id=result.upserted_id,

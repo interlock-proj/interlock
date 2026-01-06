@@ -40,9 +40,7 @@ class AccountProjection(Projection):
         self.accounts: dict[UUID, dict] = {}
         self.email_index: dict[str, UUID] = {}
 
-    def add_account(
-        self, account_id: UUID, owner_name: str, email: str, balance: int = 0
-    ) -> None:
+    def add_account(self, account_id: UUID, owner_name: str, email: str, balance: int = 0) -> None:
         """Helper to add accounts for testing."""
         self.accounts[account_id] = {
             "id": account_id,

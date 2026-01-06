@@ -201,9 +201,7 @@ class ProjectionScenario(Scenario[Any], Generic[TProjection]):
             Self for chaining.
         """
         self.expectations.append(
-            StateMatches(
-                PROJECTION_STATE_KEY, cast("NullablePredicate", predicate)
-            )
+            StateMatches(PROJECTION_STATE_KEY, cast("NullablePredicate", predicate))
         )
         return self
 

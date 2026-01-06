@@ -223,8 +223,7 @@ class TestProjectionScenarioStateAssertions:
                 )
             )
             scenario.should_have_state(
-                lambda p: "Test"
-                in [acc["owner_name"] for acc in p.accounts.values()]
+                lambda p: "Test" in [acc["owner_name"] for acc in p.accounts.values()]
             )
 
     @pytest.mark.asyncio
@@ -273,12 +272,8 @@ class TestProjectionScenarioCombined:
             )
 
             # When: Query balance again
-            updated_balance = await scenario.when(
-                GetAccountBalance(account_id=account_id)
-            )
+            updated_balance = await scenario.when(GetAccountBalance(account_id=account_id))
             assert updated_balance == 1300  # 1000 + 500 - 200
 
             # Then: Final state assertion
-            scenario.should_have_state(
-                lambda p: p.accounts[account_id]["balance"] == 1300
-            )
+            scenario.should_have_state(lambda p: p.accounts[account_id]["balance"] == 1300)

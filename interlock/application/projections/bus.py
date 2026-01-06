@@ -180,4 +180,3 @@ class QueryBus:
             The result from the query handler.
         """
         return await self.chain(query)
-

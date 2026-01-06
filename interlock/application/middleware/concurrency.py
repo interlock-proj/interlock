@@ -83,6 +83,4 @@ class ConcurrencyRetryMiddleware(Middleware):
                 # Don't sleep after the last attempt
                 if attempt < self.max_attempts - 1:
                     await asyncio.sleep(self.retry_delay)
-        raise ConcurrencyError(
-            f"Max attempts ({self.max_attempts}) reached"
-        ) from last_error
+        raise ConcurrencyError(f"Max attempts ({self.max_attempts}) reached") from last_error

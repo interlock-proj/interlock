@@ -80,4 +80,3 @@ class LoggingMiddleware(Middleware):
 
         LOGGER.log(self.level, "Received Command", extra=extra)
         return await next(command)
-

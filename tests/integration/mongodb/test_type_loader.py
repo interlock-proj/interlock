@@ -65,4 +65,3 @@ class TestLoadType:
         cls1 = load_type("interlock.domain.event.Event")
         cls2 = load_type("interlock.domain.event.Event")
         assert cls1 is cls2
-

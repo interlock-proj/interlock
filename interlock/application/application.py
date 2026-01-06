@@ -327,9 +327,7 @@ class Application:
         from ..testing import ProjectionScenario
 
         # Resolve the projection from the DI container
-        projection = self.contextual_binding.container_for(
-            projection_type
-        ).resolve(projection_type)
+        projection = self.contextual_binding.container_for(projection_type).resolve(projection_type)
         return ProjectionScenario(projection)
 
 
@@ -606,13 +604,9 @@ class ApplicationBuilder:
         container.register_singleton(EventProcessor, projection_type)
         container.register_singleton(EventProcessorExecutor)
         if catchup_condition:
-            container.register_singleton(
-                CatchupCondition, lambda: catchup_condition
-            )
+            container.register_singleton(CatchupCondition, lambda: catchup_condition)
         if catchup_strategy:
-            container.register_singleton(
-                CatchupStrategy, lambda: catchup_strategy
-            )
+            container.register_singleton(CatchupStrategy, lambda: catchup_strategy)
         return self
 
     def register_upcaster(

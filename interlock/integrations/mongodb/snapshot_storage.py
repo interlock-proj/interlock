@@ -264,9 +264,7 @@ class MongoSnapshotStorage(AggregateSnapshotStorageBackend):
         snapshot_doc = SnapshotDocument.model_validate(doc)
         return snapshot_doc.to_value()
 
-    async def list_aggregate_ids_by_type(
-        self, aggregate_type: type[Aggregate]
-    ) -> list[UUID]:
+    async def list_aggregate_ids_by_type(self, aggregate_type: type[Aggregate]) -> list[UUID]:
         """Get all aggregate IDs of a given type that have snapshots.
 
         Uses an aggregation pipeline to avoid the 16MB limit of distinct().
