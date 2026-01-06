@@ -112,8 +112,8 @@ class EventProcessorExecutor(Generic[P]):
             Average time between event.timestamp and processing time
 
         Raises:
-            StopAsyncIteration: If subscription ends
-            Any exceptions raised by event handlers
+            StopAsyncIteration: If subscription ends.
+            Exception: Any exceptions raised by event handlers.
         """
         total_lag_time = timedelta()
         events_processed = 0
@@ -177,8 +177,8 @@ class EventProcessorExecutor(Generic[P]):
             New catchup result if catchup was triggered, None otherwise
 
         Raises:
-            StopAsyncIteration: If subscription ends
-            Any exceptions from event handlers or catchup strategy
+            StopAsyncIteration: If subscription ends.
+            Exception: Any exceptions from event handlers or catchup strategy.
         """
         # Process batch and measure lag
         average_event_age = await self.process_event_batch(
@@ -216,8 +216,8 @@ class EventProcessorExecutor(Generic[P]):
         window are skipped until we encounter an event beyond the window.
 
         Raises:
-            StopAsyncIteration: When subscription ends
-            Any exceptions from event handlers or catchup strategy
+            StopAsyncIteration: When subscription ends.
+            Exception: Any exceptions from event handlers or catchup strategy.
         """
         # Execute initial catchup at startup
         catchup_result = await self.strategy.catchup(self.processor)

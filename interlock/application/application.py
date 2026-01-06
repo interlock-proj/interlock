@@ -177,8 +177,8 @@ class Application:
             *processors: The event processors to run.
 
         Raises:
-            Any exceptions raised by the event processors will be propagated to
-            the caller.
+            Exception: Any exceptions raised by the event processors will be
+                propagated to the caller.
 
         Returns:
             None

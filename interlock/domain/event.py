@@ -36,9 +36,8 @@ class Event(BaseModel, Generic[T]):
 
     The Event class is a generic wrapper that combines event metadata (id,
     aggregate_id, sequence_number, timestamp) with strongly-typed event data.
-
-    Type Parameters:
-        T: Pydantic BaseModel subclass defining the event data schema
+    The type parameter `T` is a Pydantic BaseModel subclass defining the event
+    data schema.
 
     Attributes:
         id: Unique identifier for this specific event instance

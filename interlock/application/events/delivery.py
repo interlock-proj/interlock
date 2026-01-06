@@ -103,7 +103,8 @@ class SynchronousDelivery(EventDelivery):
             events: Events to deliver
 
         Raises:
-            Any exceptions raised by processors will propagate to the caller
+            Exception: Any exceptions raised by processors will propagate to
+                the caller.
         """
         # Publish to transport (for any subscriptions)
         await self.transport.publish_events(events)

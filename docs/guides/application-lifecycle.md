@@ -325,5 +325,5 @@ async def test_with_lifecycle(app):
 ## Further Reading
 
 - [Database Integrations](database-integrations.md) — Backend implementations with lifecycle support
-- [Tutorial: Structuring Your Application](../tutorial/06-structuring-the-application.md) — Application setup patterns
+- [Tutorial: Structuring Your Application](../tutorial/07-structuring-the-application.md) — Application setup patterns
 

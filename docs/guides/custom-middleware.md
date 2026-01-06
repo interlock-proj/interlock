@@ -10,7 +10,7 @@ validation, authorization, caching, and more.
 ## Prerequisites
 
 - Understanding of [Commands](../concepts/commands.md) and [Queries](../concepts/queries.md)
-- Familiarity with the [Tutorial: Middleware](../tutorial/05-middleware.md)
+- Familiarity with the [Tutorial: Middleware](../tutorial/06-middleware.md)
 
 ## What is Middleware?
 
@@ -515,7 +515,7 @@ async def test_audit_middleware_logs_queries(app_with_audit):
 
 ## Next Steps
 
-- [Tutorial: Middleware](../tutorial/05-middleware.md) — Hands-on middleware example
+- [Tutorial: Middleware](../tutorial/06-middleware.md) — Hands-on middleware example
 - [Commands](../concepts/commands.md) — Write operations
 - [Queries](../concepts/queries.md) — Read operations
 - [API Reference](../reference/index.md) — Complete API documentation

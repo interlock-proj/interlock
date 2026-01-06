@@ -24,8 +24,8 @@ class Query(BaseModel, Generic[TResponse]):
     - Return typed responses
     - Are routed to projections (not aggregates)
 
-    Type Parameters:
-        TResponse: The type returned by query handlers for this query
+    The type parameter `TResponse` specifies the type returned by query handlers
+    for this query.
 
     Attributes:
         query_id: Unique identifier for this query instance.

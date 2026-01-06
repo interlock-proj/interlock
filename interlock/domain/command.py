@@ -18,12 +18,9 @@ class Command(BaseModel, Generic[TResponse]):
     command handlers. All commands must include an aggregate_id to identify
     which aggregate instance to operate on.
 
-    Commands are generic over their response type, allowing handlers to
-    return typed results. Use `Command[None]` for commands that don't
+    Commands are generic over their response type `TResponse`, allowing handlers
+    to return typed results. Use `Command[None]` for commands that don't
     return a value.
-
-    Type Parameters:
-        TResponse: The type returned by command handlers for this command
 
     Attributes:
         aggregate_id: UUID of the aggregate that should handle this command.

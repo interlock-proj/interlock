@@ -86,7 +86,7 @@ class CatchupStrategy(ABC, Generic[P]):
             CatchupResult if events should be skipped, None otherwise
 
         Raises:
-            Implementation-specific exceptions for catchup failures
+            Exception: Implementation-specific exceptions for catchup failures.
         """
         ...
 
